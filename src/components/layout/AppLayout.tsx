@@ -5,6 +5,7 @@ import { BottomTabs } from '@/components/layout/BottomTabs'
 import { TreatCatcherModal } from '@/components/game/TreatCatcherModal'
 import { NotificationsDrawer } from '@/components/notifications/NotificationsDrawer'
 import { RealtimeAlerts } from '@/components/realtime/RealtimeAlerts'
+import { AuthGateModal } from '@/components/auth/AuthGateModal'
 import { useApp } from '@/context/AppContext'
 
 export function AppLayout() {
@@ -22,6 +23,7 @@ export function AppLayout() {
       </div>
       <NotificationsDrawer />
       <TreatCatcherModal open={gameOpen} onClose={closeGame} />
+      <AuthGateModal />
       <RealtimeAlerts />
     </div>
   )

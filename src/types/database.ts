@@ -1,6 +1,8 @@
 export interface DbProfile {
   id: string
-  email: string | null
+  // Güvenlik (VULN-04): e-posta artık profiles tablosunda tutulmuyor;
+  // kimlik e-postası auth.users içinde güvende. UI e-postayı profilden
+  // okumaz.
   username: string
   name: string
   breed: string

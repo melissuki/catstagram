@@ -2,6 +2,7 @@ import { requireSupabase } from '@/services/supabaseClient'
 import { mapConversation, mapMessage, mapProfile } from '@/services/mappers'
 import { createNotification } from '@/services/notifications'
 import { fetchProfileById } from '@/services/profiles'
+import { sanitizeUserText } from '@/utils/sanitize'
 import type { Conversation, Message } from '@/types'
 import type { DbMessage, DbProfile } from '@/types/database'
 
@@ -132,7 +133,7 @@ export async function sendMessage(
   text: string,
 ): Promise<Message> {
   const supabase = requireSupabase()
-  const content = text.trim()
+  const content = sanitizeUserText(text, 2000)
   if (!content) throw new Error('Message is empty')
   if (receiverId === senderId) throw new Error('Cannot message yourself')
 

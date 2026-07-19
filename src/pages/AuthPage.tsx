@@ -7,6 +7,8 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { LanguageToggle } from '@/components/common/LanguageToggle'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { SetupBanner } from '@/components/common/SetupBanner'
+import { toUserFacingError } from '@/utils/userFacingError'
+import { sanitizeUserText } from '@/utils/sanitize'
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'verify-sent'
 
@@ -84,10 +86,10 @@ export function AuthPage() {
           email: form.email,
           password: form.password,
           username: form.username,
-          name: form.name.trim() || 'Cat',
-          breed: form.breed.trim() || 'Mixed',
+          name: sanitizeUserText(form.name, 80) || 'Cat',
+          breed: sanitizeUserText(form.breed, 80) || 'Mixed',
           age: Number(form.age) || 1,
-          bio: form.bio.trim(),
+          bio: sanitizeUserText(form.bio, 500),
           avatarFile: null,
         })
 
@@ -107,25 +109,17 @@ export function AuthPage() {
         return
       }
     } catch (err) {
-      const authErr = err as Error & { status?: number }
-      console.error('[AuthPage] signup/login failed', {
-        message: authErr?.message,
-        status: authErr?.status,
-        err,
-      })
-      let message =
-        err instanceof Error ? err.message : t.auth.authFailed
-      if (
-        err instanceof Error &&
-        (err.name === 'UsernameTakenError' || err.message === 'USERNAME_TAKEN')
-      ) {
-        message = t.auth.usernameTaken
-      } else if (
-        err instanceof Error &&
-        err.message.toLowerCase().includes('username must be')
-      ) {
-        message = t.auth.usernameInvalid
-      }
+      console.error('[AuthPage] signup/login failed', err)
+      const code = toUserFacingError(err, t.auth.authFailed)
+      let message: string = t.auth.authFailed
+      if (code === 'USERNAME_TAKEN') message = t.auth.usernameTaken
+      else if (code === 'USERNAME_INVALID') message = t.auth.usernameInvalid
+      else if (code === 'EMAIL_NOT_CONFIRMED') message = t.auth.verifyEmailHint
+      else if (code === 'INVALID_CREDENTIALS') message = t.auth.invalidCredentials
+      else if (code === 'RATE_LIMITED') message = t.auth.rateLimited
+      else if (code === 'NETWORK') message = t.auth.networkError
+      else if (code === 'NOT_CONFIGURED') message = t.setup.title
+      else if (code !== t.auth.authFailed) message = code
       setError(message)
       toast.error(message)
     } finally {

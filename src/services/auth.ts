@@ -3,6 +3,7 @@ import { requireSupabase } from '@/services/supabaseClient'
 import { fetchProfileById, isUsernameAvailable } from '@/services/profiles'
 import { getAppUrl } from '@/utils/appUrl'
 import { isValidUsername, normalizeUsername } from '@/utils/username'
+import { sanitizeUserText } from '@/utils/sanitize'
 import type { CatProfile } from '@/types'
 
 export interface SignUpInput {
@@ -82,10 +83,10 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
         emailRedirectTo: `${appUrl}/auth`,
         data: {
           username,
-          name: input.name.trim() || 'Cat',
-          breed: input.breed.trim() || 'Mixed',
+          name: sanitizeUserText(input.name, 80) || 'Cat',
+          breed: sanitizeUserText(input.breed, 80) || 'Mixed',
           age: input.age,
-          bio: input.bio.trim(),
+          bio: sanitizeUserText(input.bio, 500),
         },
       },
     })
@@ -192,11 +193,14 @@ export async function getSessionUserId(): Promise<string | null> {
 
 export async function resetPasswordForEmail(email: string): Promise<void> {
   const supabase = requireSupabase()
-  const appUrl = getAppUrl()
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin.replace(/\/$/, '')
+      : getAppUrl()
 
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${appUrl}/reset-password`,
+      redirectTo: `${origin}/reset-password`,
     })
     if (error) {
       logAuthError('resetPasswordForEmail', error)

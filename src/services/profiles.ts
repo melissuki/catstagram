@@ -3,6 +3,7 @@ import { mapProfile } from '@/services/mappers'
 import { uploadAvatar } from '@/services/storage'
 import { createNotification } from '@/services/notifications'
 import { isValidUsername, normalizeUsername } from '@/utils/username'
+import { sanitizeUserText } from '@/utils/sanitize'
 import type { CatProfile } from '@/types'
 import type { DbProfile } from '@/types/database'
 
@@ -125,18 +126,14 @@ export async function isUsernameAvailable(
 
 export async function updateProfileRecord(
   userId: string,
+  // Güvenlik (VULN-02): food_streak / last_fed_date / game_high_score
+  // buradan yazılamaz. Bunlar yalnızca sunucudaki RPC'ler üzerinden
+  // güncellenir (update_game_high_score, feed_cat) ve DB'de bu kolonlara
+  // doğrudan UPDATE izni kaldırılmıştır.
   updates: Partial<
     Pick<
       DbProfile,
-      | 'name'
-      | 'breed'
-      | 'age'
-      | 'bio'
-      | 'avatar_url'
-      | 'username'
-      | 'food_streak'
-      | 'last_fed_date'
-      | 'game_high_score'
+      'name' | 'breed' | 'age' | 'bio' | 'avatar_url' | 'username'
     >
   >,
 ): Promise<void> {
@@ -180,10 +177,10 @@ export async function updateMyProfile(
   }
 
   await updateProfileRecord(userId, {
-    name: updates.name,
-    breed: updates.breed,
+    name: sanitizeUserText(updates.name, 80),
+    breed: sanitizeUserText(updates.breed, 80),
     age: updates.age,
-    bio: updates.bio,
+    bio: sanitizeUserText(updates.bio, 500),
     ...(avatar_url ? { avatar_url } : {}),
     ...(username ? { username } : {}),
   })
@@ -191,18 +188,41 @@ export async function updateMyProfile(
   return fetchProfileById(userId)
 }
 
-/** Persist Treat Catcher high score for the authenticated user only. */
+/**
+ * Persist Treat Catcher high score for the authenticated user only.
+ * Güvenlik (VULN-02): Skor artık doğrudan tabloya yazılmaz. Sunucudaki
+ * SECURITY DEFINER fonksiyonu `update_game_high_score` çağrılır; fonksiyon
+ * skoru doğrular (negatif/üst sınır kontrolü) ve yalnızca mevcut rekorun
+ * üzerindeyse günceller. İstemciden 999999 gibi keyfi bir değer PATCH ile
+ * yazılamaz.
+ */
 export async function updateGameHighScore(
   userId: string,
   score: number,
 ): Promise<{ profile: CatProfile; isNewHigh: boolean }> {
-  const current = await fetchProfileById(userId)
-  if (score <= current.gameHighScore) {
-    return { profile: current, isNewHigh: false }
-  }
-  await updateProfileRecord(userId, { game_high_score: score })
+  const supabase = requireSupabase()
+  const previous = await fetchProfileById(userId)
+
+  const { data, error } = await supabase.rpc('update_game_high_score', {
+    new_score: score,
+  })
+  if (error) throw new Error(error.message)
+
   const profile = await fetchProfileById(userId)
-  return { profile, isNewHigh: true }
+  const isNewHigh = (data as number) > previous.gameHighScore
+  return { profile, isNewHigh }
+}
+
+/**
+ * Bugün kediyi besle (mama serisi). Güvenlik (VULN-02): food_streak
+ * sunucuda, son besleme tarihine göre HESAPLANIR; istemci değeri kendisi
+ * belirleyemez. Sadece "besle" komutu gönderir.
+ */
+export async function feedCat(userId: string): Promise<CatProfile> {
+  const supabase = requireSupabase()
+  const { error } = await supabase.rpc('feed_cat')
+  if (error) throw new Error(error.message)
+  return fetchProfileById(userId)
 }
 
 export async function fetchSuggestedCats(

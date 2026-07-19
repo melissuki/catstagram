@@ -13,6 +13,10 @@ import { UsernameRedirectPage } from '@/pages/UsernameRedirectPage'
 import { SearchPage } from '@/pages/SearchPage'
 import { MessagesPage } from '@/pages/MessagesPage'
 
+/**
+ * Guest / Explore: public browse of feed, search, and profiles.
+ * Interactive writes + own profile / DMs require auth (modal gate).
+ */
 export default function App() {
   return (
     <ThemeProvider>
@@ -22,17 +26,20 @@ export default function App() {
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/search" element={<SearchPage />} />
+
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/profile/:userId" element={<UserProfilePage />} />
+              <Route path="/u/:username" element={<UsernameRedirectPage />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+
+              <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/profile/:userId" element={<UserProfilePage />} />
-                <Route path="/u/:username" element={<UsernameRedirectPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
-                <Route path="/dashboard" element={<Navigate to="/" replace />} />
               </Route>
             </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

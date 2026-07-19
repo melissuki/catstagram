@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { Cat, MessageCircle } from 'lucide-react'
+import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { LanguageToggle } from '@/components/common/LanguageToggle'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 
 export function TopBar() {
   const { t } = useTranslation()
+  const { requireAuth, openAuthModal, isAuthenticated } = useApp()
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-purple-100/40 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-xl dark:border-purple-500/20 dark:bg-slate-950/70 lg:hidden">
@@ -18,8 +20,20 @@ export function TopBar() {
         </h1>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
+        {!isAuthenticated ? (
+          <button
+            type="button"
+            onClick={openAuthModal}
+            className="btn-primary-sm px-2.5 text-[11px]"
+          >
+            {t.auth.joinCta}
+          </button>
+        ) : null}
         <Link
           to="/messages"
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
           className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-purple-100/50 bg-white/80 text-purple-600 shadow-sm transition hover:bg-pink-50 dark:border-purple-500/20 dark:bg-slate-900/80 dark:text-pink-300"
           aria-label={t.nav.messages}
         >

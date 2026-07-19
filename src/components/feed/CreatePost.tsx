@@ -5,7 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { ImageUpload } from '@/components/common/ImageUpload'
 
 export function CreatePost() {
-  const { createPost } = useApp()
+  const { createPost, isAuthenticated, openAuthModal } = useApp()
   const { t } = useTranslation()
   const [file, setFile] = useState<File | null>(null)
   const [caption, setCaption] = useState('')
@@ -30,11 +30,28 @@ export function CreatePost() {
       setCaption('')
       setSuccess(true)
       window.setTimeout(() => setSuccess(false), 2000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.feed.error)
+    } catch {
+      setError(t.feed.error)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <section className="card-panel animate-fade-up bg-gradient-to-br from-white via-pink-50/50 to-orange-50/40 p-4 text-center sm:p-5 dark:from-slate-900 dark:via-purple-950/30 dark:to-slate-950">
+        <Sparkles className="mx-auto h-5 w-5 text-pink-500" />
+        <p className="mt-2 font-brand text-base font-bold text-slate-700 dark:text-slate-100">
+          {t.auth.gateTitle}
+        </p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {t.auth.gateBody}
+        </p>
+        <button type="button" onClick={openAuthModal} className="btn-primary mt-3">
+          {t.auth.joinCta}
+        </button>
+      </section>
+    )
   }
 
   return (

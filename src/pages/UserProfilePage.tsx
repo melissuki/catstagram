@@ -124,9 +124,12 @@ export function UserProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  void startChatWith(profile.id).then(() =>
-                    navigate('/messages'),
-                  )
+                  void startChatWith(profile.id)
+                    .then(() => navigate('/messages'))
+                    .catch((error: Error) => {
+                      if (error.message === 'AUTH_REQUIRED') return
+                      console.error(error)
+                    })
                 }}
                 className="btn-soft"
               >

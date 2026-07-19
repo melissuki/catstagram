@@ -23,10 +23,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 export function Sidebar() {
-  const { currentUser, logout, openGame } = useApp()
+  const { currentUser, logout, openGame, openAuthModal, requireAuth } = useApp()
   const { t } = useTranslation()
-
-  if (!currentUser) return null
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-purple-100/40 bg-white/55 px-4 py-6 backdrop-blur-xl dark:border-purple-500/20 dark:bg-slate-950/40 lg:flex xl:w-72">
@@ -39,7 +37,7 @@ export function Sidebar() {
             {t.appName}
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            @{currentUser.username}
+            {currentUser ? `@${currentUser.username}` : t.auth.continueExploring}
           </p>
         </div>
       </div>
@@ -62,11 +60,23 @@ export function Sidebar() {
           <Gamepad2 className="h-5 w-5 text-pink-500" />
           {t.game.play}
         </button>
-        <NavLink to="/messages" className={linkClass}>
+        <NavLink
+          to="/messages"
+          className={linkClass}
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
+        >
           <MessageCircle className="h-5 w-5" />
           {t.nav.messages}
         </NavLink>
-        <NavLink to="/profile" className={linkClass}>
+        <NavLink
+          to="/profile"
+          className={linkClass}
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
+        >
           <UserRound className="h-5 w-5" />
           {t.nav.profile}
         </NavLink>
@@ -77,25 +87,33 @@ export function Sidebar() {
           <ThemeToggle />
           <LanguageToggle />
         </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-purple-100/40 bg-white/70 px-3 py-3 shadow-sm dark:border-purple-500/20 dark:bg-slate-900/70">
-          <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-100">
-              {currentUser.name}
-            </p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-              @{currentUser.username}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900/70 dark:hover:text-slate-100"
-        >
-          <LogOut className="h-4 w-4" />
-          {t.nav.logout}
-        </button>
+        {currentUser ? (
+          <>
+            <div className="flex items-center gap-3 rounded-2xl border border-purple-100/40 bg-white/70 px-3 py-3 shadow-sm dark:border-purple-500/20 dark:bg-slate-900/70">
+              <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-100">
+                  {currentUser.name}
+                </p>
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                  @{currentUser.username}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900/70 dark:hover:text-slate-100"
+            >
+              <LogOut className="h-4 w-4" />
+              {t.nav.logout}
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={openAuthModal} className="btn-primary w-full">
+            {t.auth.joinCta}
+          </button>
+        )}
       </div>
     </aside>
   )

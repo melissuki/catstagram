@@ -16,8 +16,13 @@ import type {
   Post,
   Story,
 } from '@/types'
+import { toast } from 'react-toastify'
 import { isSupabaseConfigured, requireSupabase } from '@/services/supabaseClient'
 import * as api from '@/services/api'
+import { tryAction } from '@/utils/actionThrottle'
+import { sanitizeUserText } from '@/utils/sanitize'
+import { toUserFacingError } from '@/utils/userFacingError'
+import { getTranslations } from '@/i18n/translations'
 
 interface AppContextValue {
   isConfigured: boolean
@@ -26,6 +31,11 @@ interface AppContextValue {
   setLanguage: (language: Language) => void
   isAuthenticated: boolean
   currentUser: CatProfile | null
+  authModalOpen: boolean
+  openAuthModal: () => void
+  closeAuthModal: () => void
+  /** Opens the auth gate when guest; returns true only when signed in. */
+  requireAuth: () => boolean
   signUp: (input: api.SignUpInput) => Promise<api.SignUpResult>
   signIn: (input: api.SignInInput) => Promise<void>
   requestPasswordReset: (email: string) => Promise<void>
@@ -98,25 +108,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [gameOpen, setGameOpen] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
 
   const setLanguage = useCallback((next: Language) => {
     setLanguageState(next)
     localStorage.setItem(LANGUAGE_STORAGE_KEY, next)
   }, [])
 
+  const openAuthModal = useCallback(() => setAuthModalOpen(true), [])
+  const closeAuthModal = useCallback(() => setAuthModalOpen(false), [])
+  const requireAuth = useCallback(() => {
+    if (currentUser) return true
+    setAuthModalOpen(true)
+    return false
+  }, [currentUser])
+
   const refreshFeed = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!currentUser) return
+      if (!isSupabaseConfigured) return
       const silent = options?.silent ?? false
+      const userId = currentUser?.id ?? null
       if (!silent) {
         setFeedLoading(true)
         setFeedError(null)
       }
       try {
         const [feedData, following, storyResult] = await Promise.all([
-          api.fetchFeed(currentUser.id),
-          api.fetchFollowingIds(currentUser.id),
-          api.fetchStories(currentUser.id).catch((error) => {
+          api.fetchFeed(userId),
+          userId
+            ? api.fetchFollowingIds(userId)
+            : Promise.resolve([] as string[]),
+          api.fetchStories(userId ?? '').catch((error) => {
             console.warn('[stories] unavailable — run add_stories.sql?', error)
             return [] as Story[]
           }),
@@ -125,18 +147,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setStories(storyResult)
         setFollowingIds(following)
       } catch (error) {
+        console.error('[feed]', error)
         if (!silent) {
-          setFeedError(
-            error instanceof Error ? error.message : 'Failed to load feed',
-          )
-        } else {
-          console.error(error)
+          const t = getTranslations(language)
+          setFeedError(t.feed.error)
         }
       } finally {
         if (!silent) setFeedLoading(false)
       }
     },
-    [currentUser],
+    [currentUser, language],
   )
 
   const refreshChats = useCallback(
@@ -216,13 +236,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         setCurrentUser(null)
-        setPosts([])
-        setStories([])
         setConversations([])
         setFollowingIds([])
         setNotifications([])
         setNotificationsOpen(false)
         setGameOpen(false)
+        setActiveConversationId(null)
+        // Guest explore: keep public feed/stories available
+        void api
+          .fetchFeed(null)
+          .then(setPosts)
+          .catch((error) => console.error('[feed] guest reload', error))
+        void api
+          .fetchStories('')
+          .then(setStories)
+          .catch(() => setStories([]))
         return
       }
       void bootstrapSession(session.user.id)
@@ -234,22 +262,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [bootstrapSession])
 
+  // Public explore feed for guests + authenticated users
   useEffect(() => {
-    if (!currentUser) return
+    if (!authReady || !isSupabaseConfigured) return
     void refreshFeed()
-    void refreshChats()
-    void refreshNotifications()
-  }, [currentUser, refreshFeed, refreshChats, refreshNotifications])
+    if (currentUser) {
+      void refreshChats()
+      void refreshNotifications()
+    }
+  }, [authReady, currentUser, refreshFeed, refreshChats, refreshNotifications])
 
   // Notification realtime is handled by RealtimeAlerts (toast + refresh).
 
   // Live global feed: posts / likes / comments via supabase.channel()
   useEffect(() => {
-    if (!currentUser || !isSupabaseConfigured) return
+    if (!authReady || !isSupabaseConfigured) return
     return api.subscribeToFeed(() => {
       void refreshFeed({ silent: true })
     })
-  }, [currentUser, refreshFeed])
+  }, [authReady, refreshFeed])
 
   // Load full chronological history whenever a peer thread is opened
   useEffect(() => {
@@ -360,14 +391,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.signOut()
     setCurrentUser(null)
-    setPosts([])
-    setStories([])
     setFollowingIds([])
     setConversations([])
     setNotifications([])
     setNotificationsOpen(false)
     setGameOpen(false)
-  }, [])
+    setActiveConversationId(null)
+    void refreshFeed({ silent: true })
+  }, [refreshFeed])
 
   const updateProfile = useCallback(
     async (updates: {
@@ -379,7 +410,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       avatarFile?: File | null
     }) => {
       if (!currentUser) return
-      const next = await api.updateMyProfile(currentUser.id, updates)
+      const next = await api.updateMyProfile(currentUser.id, {
+        ...updates,
+        name: sanitizeUserText(updates.name, 80),
+        breed: sanitizeUserText(updates.breed, 80),
+        bio: sanitizeUserText(updates.bio, 500),
+      })
       setCurrentUser(next)
     },
     [currentUser],
@@ -387,19 +423,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const createPost = useCallback(
     async (file: File, caption: string) => {
+      if (!requireAuth()) return
       if (!currentUser) return
       const post = await api.createPost({
         userId: currentUser.id,
         file,
-        caption,
+        caption: sanitizeUserText(caption, 2000),
       })
       setPosts((prev) => [post, ...prev])
     },
-    [currentUser],
+    [currentUser, requireAuth],
   )
 
   const createStory = useCallback(
     async (file: File) => {
+      if (!requireAuth()) return
       if (!currentUser) return
       const story = await api.createStory({
         userId: currentUser.id,
@@ -407,7 +445,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       setStories((prev) => [story, ...prev.filter((s) => s.id !== story.id)])
     },
-    [currentUser],
+    [currentUser, requireAuth],
   )
 
   const markStoriesAsViewed = useCallback((storyIds: string[]) => {
@@ -422,7 +460,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const toggleLike = useCallback(
     async (postId: string) => {
+      if (!requireAuth()) return
       if (!currentUser) return
+      const t = getTranslations(language)
+      if (!tryAction(`like:${currentUser.id}:${postId}`)) {
+        toast.info(t.auth.slowDown)
+        return
+      }
       const target = posts.find((post) => post.id === postId)
       if (!target) return
 
@@ -446,47 +490,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPosts((prev) =>
           prev.map((post) => (post.id === postId ? target : post)),
         )
-        throw error
+        toast.error(toUserFacingError(error, t.auth.authFailed))
       }
     },
-    [currentUser, posts],
+    [currentUser, posts, requireAuth, language],
   )
 
   const addComment = useCallback(
     async (postId: string, text: string) => {
-      if (!currentUser || !text.trim()) return
-      const comment = await api.addComment(postId, currentUser.id, text)
-      setPosts((prev) =>
-        prev.map((post) =>
-          post.id === postId
-            ? { ...post, comments: [...post.comments, comment] }
-            : post,
-        ),
-      )
+      if (!requireAuth()) return
+      if (!currentUser) return
+      const clean = sanitizeUserText(text, 1000)
+      if (!clean) return
+      const t = getTranslations(language)
+      if (!tryAction(`comment:${currentUser.id}:${postId}`)) {
+        toast.info(t.auth.slowDown)
+        return
+      }
+      try {
+        const comment = await api.addComment(postId, currentUser.id, clean)
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === postId
+              ? { ...post, comments: [...post.comments, comment] }
+              : post,
+          ),
+        )
+      } catch (error) {
+        toast.error(toUserFacingError(error, t.auth.authFailed))
+      }
     },
-    [currentUser],
+    [currentUser, requireAuth, language],
   )
 
   const toggleFollow = useCallback(
     async (catId: string) => {
+      if (!requireAuth()) return
       if (!currentUser) return
-      const isFollowing = await api.toggleFollow(currentUser.id, catId)
-      setFollowingIds((prev) =>
-        isFollowing
-          ? [...prev, catId]
-          : prev.filter((id) => id !== catId),
-      )
-      // Refresh feed so newly followed cats appear (or disappear when unfollowed)
-      void refreshFeed({ silent: true })
-      // Keep own following tally in sync
-      void api.fetchProfileById(currentUser.id).then(setCurrentUser)
+      const t = getTranslations(language)
+      if (!tryAction(`follow:${currentUser.id}:${catId}`)) {
+        toast.info(t.auth.slowDown)
+        return
+      }
+      try {
+        const isFollowing = await api.toggleFollow(currentUser.id, catId)
+        setFollowingIds((prev) =>
+          isFollowing
+            ? [...prev, catId]
+            : prev.filter((id) => id !== catId),
+        )
+        void refreshFeed({ silent: true })
+        void api.fetchProfileById(currentUser.id).then(setCurrentUser)
+      } catch (error) {
+        toast.error(toUserFacingError(error, t.auth.authFailed))
+      }
     },
-    [currentUser, refreshFeed],
+    [currentUser, refreshFeed, requireAuth, language],
   )
 
   const startChatWith = useCallback(
     async (friendId: string) => {
-      if (!currentUser) throw new Error('Not signed in')
+      if (!requireAuth()) throw new Error('AUTH_REQUIRED')
+      if (!currentUser) throw new Error('AUTH_REQUIRED')
       const peerId = await api.getOrCreateConversation(currentUser.id, friendId)
       const shell = await api.ensureConversation(currentUser.id, peerId)
       setConversations((prev) => {
@@ -498,49 +563,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveConversationId(peerId)
       return peerId
     },
-    [currentUser],
+    [currentUser, requireAuth],
   )
 
   const sendMessage = useCallback(
     async (peerId: string, text: string) => {
-      if (!currentUser || !text.trim()) return
-      const message = await api.sendMessage(peerId, currentUser.id, text)
+      if (!requireAuth()) return
+      if (!currentUser) return
+      const clean = sanitizeUserText(text, 2000)
+      if (!clean) return
+      const t = getTranslations(language)
+      if (!tryAction(`dm:${currentUser.id}:${peerId}`)) {
+        toast.info(t.auth.slowDown)
+        return
+      }
 
-      setConversations((prev) => {
-        const exists = prev.some((chat) => chat.id === peerId)
-        if (!exists) {
-          void refreshChats({ silent: true })
+      try {
+        const message = await api.sendMessage(peerId, currentUser.id, clean)
+
+        setConversations((prev) => {
+          const exists = prev.some((chat) => chat.id === peerId)
+          if (!exists) {
+            void refreshChats({ silent: true })
+            return prev
+          }
           return prev
-        }
-        return prev
-          .map((chat) => {
-            if (chat.id !== peerId) return chat
-            if (chat.messages.some((item) => item.id === message.id)) {
+            .map((chat) => {
+              if (chat.id !== peerId) return chat
+              if (chat.messages.some((item) => item.id === message.id)) {
+                return {
+                  ...chat,
+                  lastMessage: message.text,
+                  updatedAt: message.createdAt,
+                }
+              }
               return {
                 ...chat,
+                messages: [...chat.messages, message],
                 lastMessage: message.text,
                 updatedAt: message.createdAt,
               }
-            }
-            return {
-              ...chat,
-              messages: [...chat.messages, message],
-              lastMessage: message.text,
-              updatedAt: message.createdAt,
-            }
-          })
-          .sort(
-            (a, b) =>
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-          )
-      })
+            })
+            .sort(
+              (a, b) =>
+                new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+            )
+        })
+      } catch (error) {
+        toast.error(toUserFacingError(error, t.auth.authFailed))
+      }
     },
-    [currentUser, refreshChats],
+    [currentUser, refreshChats, requireAuth, language],
   )
 
-  const openNotifications = useCallback(() => setNotificationsOpen(true), [])
+  const openNotifications = useCallback(() => {
+    if (!requireAuth()) return
+    setNotificationsOpen(true)
+  }, [requireAuth])
   const closeNotifications = useCallback(() => setNotificationsOpen(false), [])
-  const openGame = useCallback(() => setGameOpen(true), [])
+  const openGame = useCallback(() => {
+    if (!requireAuth()) return
+    setGameOpen(true)
+  }, [requireAuth])
   const closeGame = useCallback(() => setGameOpen(false), [])
 
   const submitGameScore = useCallback(
@@ -569,6 +653,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLanguage,
       isAuthenticated: Boolean(currentUser),
       currentUser,
+      authModalOpen,
+      openAuthModal,
+      closeAuthModal,
+      requireAuth,
       signUp,
       signIn,
       requestPasswordReset,
@@ -611,6 +699,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       language,
       setLanguage,
       currentUser,
+      authModalOpen,
+      openAuthModal,
+      closeAuthModal,
+      requireAuth,
       signUp,
       signIn,
       requestPasswordReset,

@@ -80,7 +80,11 @@ export function SuggestedFriends() {
                 <button
                   type="button"
                   onClick={() => {
-                    void startChatWith(cat.id).then(() => navigate('/messages'))
+                    void startChatWith(cat.id)
+                      .then(() => navigate('/messages'))
+                      .catch((error: Error) => {
+                        if (error.message === 'AUTH_REQUIRED') return
+                      })
                   }}
                   className="rounded-xl bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 px-3 py-1.5 text-xs font-bold text-purple-700 transition hover:from-purple-100 hover:via-pink-100 hover:to-orange-100"
                 >

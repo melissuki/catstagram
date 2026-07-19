@@ -13,7 +13,7 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
 
 export function BottomTabs() {
   const { t } = useTranslation()
-  const { openGame } = useApp()
+  const { openGame, requireAuth } = useApp()
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-purple-100/40 bg-white/85 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-sm backdrop-blur-xl dark:border-purple-500/20 dark:bg-slate-950/85 lg:hidden">
@@ -35,7 +35,13 @@ export function BottomTabs() {
           <Gamepad2 className="h-5 w-5" />
           {t.nav.play}
         </button>
-        <NavLink to="/profile" className={tabClass}>
+        <NavLink
+          to="/profile"
+          className={tabClass}
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
+        >
           <UserRound className="h-5 w-5" />
           {t.nav.profile}
         </NavLink>

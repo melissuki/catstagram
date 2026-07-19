@@ -2,6 +2,7 @@ import { requireSupabase } from '@/services/supabaseClient'
 import { extractTags, mapComment, mapPost } from '@/services/mappers'
 import { uploadPostImage } from '@/services/storage'
 import { createNotification } from '@/services/notifications'
+import { sanitizeUserText } from '@/utils/sanitize'
 import type { Comment, Post } from '@/types'
 import type { DbComment, DbPost, DbProfile } from '@/types/database'
 
@@ -114,14 +115,15 @@ export async function createPost(input: {
 }): Promise<Post> {
   const supabase = requireSupabase()
   const imageUrl = await uploadPostImage(input.userId, input.file)
-  const tags = extractTags(input.caption)
+  const caption = sanitizeUserText(input.caption, 2000)
+  const tags = extractTags(caption)
 
   const { data, error } = await supabase
     .from('posts')
     .insert({
       user_id: input.userId,
       image_url: imageUrl,
-      caption: input.caption.trim(),
+      caption,
       tags,
     })
     .select(postSelect)
@@ -183,7 +185,8 @@ export async function addComment(
   text: string,
 ): Promise<Comment> {
   const supabase = requireSupabase()
-  const body = text.trim()
+  const body = sanitizeUserText(text, 1000)
+  if (!body) throw new Error('Comment is empty')
   const { data, error } = await supabase
     .from('comments')
     .insert({
