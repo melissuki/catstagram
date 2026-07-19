@@ -16,7 +16,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition duration-300 ${
     isActive
       ? 'nav-active'
-      : 'text-slate-500 hover:bg-gradient-to-r hover:from-teal-50/80 hover:to-emerald-50/80 hover:text-slate-700'
+      : 'text-slate-500 hover:bg-gradient-to-r hover:from-purple-50/80 hover:via-pink-50/80 hover:to-orange-50/80 hover:text-slate-700'
   }`
 
 export function Sidebar() {
@@ -26,9 +26,9 @@ export function Sidebar() {
   if (!currentUser) return null
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-white/60 bg-white/50 px-4 py-6 backdrop-blur-xl lg:flex xl:w-72">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-purple-100/40 bg-white/55 px-4 py-6 backdrop-blur-xl lg:flex xl:w-72">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-300/40 to-emerald-300/40 text-teal-600 shadow-sm">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-300/40 via-pink-300/40 to-orange-300/40 text-purple-600 shadow-sm">
           <Cat className="h-6 w-6" />
         </div>
         <div>

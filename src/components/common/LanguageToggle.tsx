@@ -11,7 +11,7 @@ export function LanguageToggle() {
       className="btn-soft"
       aria-label={t.common.language}
     >
-      <Languages className="h-4 w-4 text-teal-500" />
+      <Languages className="h-4 w-4 text-pink-500" />
       <span className="text-xs">{language === 'en' ? t.common.turkish : t.common.english}</span>
     </button>
   )

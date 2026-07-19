@@ -13,7 +13,7 @@ export function MamaStreakWidget({ compact = false }: MamaStreakWidgetProps) {
 
   return (
     <section
-      className={`animate-fade-up overflow-hidden rounded-3xl border border-white/70 bg-gradient-to-br from-white/90 via-teal-50/40 to-emerald-50/50 shadow-sm backdrop-blur-md ${
+      className={`card-panel animate-fade-up overflow-hidden bg-gradient-to-br from-white via-pink-50/40 to-orange-50/30 ${
         compact ? 'p-4' : 'p-5 sm:p-6'
       }`}
     >
@@ -26,7 +26,7 @@ export function MamaStreakWidget({ compact = false }: MamaStreakWidgetProps) {
             <p className="mt-1 text-sm text-slate-500">{t.dashboard.subtitle}</p>
           ) : null}
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-600 shadow-sm">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 text-purple-600 shadow-sm">
           <Flame className="h-5 w-5" />
         </div>
       </div>
@@ -36,7 +36,7 @@ export function MamaStreakWidget({ compact = false }: MamaStreakWidgetProps) {
           streak.fedToday ? 'animate-streak-pop' : ''
         }`}
       >
-        <span className="font-brand bg-gradient-to-r from-teal-500 to-emerald-500 bg-clip-text text-3xl font-bold text-transparent">
+        <span className="font-brand bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-3xl font-bold text-transparent">
           {streak.count}
         </span>
         <div>
@@ -66,7 +66,7 @@ export function MamaStreakWidget({ compact = false }: MamaStreakWidgetProps) {
       {compact ? (
         <Link
           to="/dashboard"
-          className="mt-3 block text-center text-xs font-semibold text-teal-600 transition hover:text-emerald-600"
+          className="mt-3 block text-center text-xs font-semibold text-purple-600 transition hover:text-orange-500"
         >
           {t.nav.dashboard} →
         </Link>

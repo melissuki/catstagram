@@ -60,7 +60,7 @@ export function ImageUpload({
 
       <label
         htmlFor={inputId}
-        className={`group flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-teal-200/80 bg-gradient-to-br from-white/80 via-teal-50/30 to-emerald-50/20 transition hover:border-teal-300 hover:from-teal-50/40 ${
+        className={`group flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-purple-100/60 bg-gradient-to-br from-white via-pink-50/30 to-orange-50/20 transition hover:border-pink-300 hover:from-purple-50/40 ${
           compact ? 'min-h-36' : 'min-h-48'
         }`}
       >
@@ -72,7 +72,7 @@ export function ImageUpload({
           />
         ) : (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-600 shadow-sm transition group-hover:scale-105">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 text-purple-600 shadow-sm transition group-hover:scale-105">
               <ImagePlus className="h-6 w-6" />
             </div>
             <p className="text-sm font-semibold text-slate-700">Choose a photo</p>

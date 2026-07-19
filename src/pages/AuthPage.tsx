@@ -130,8 +130,8 @@ export function AuthPage() {
         {!isConfigured ? <SetupBanner /> : null}
 
         <div className="animate-fade-up overflow-hidden card-panel">
-          <div className="bg-gradient-to-br from-white via-teal-50/40 to-emerald-50/50 px-6 py-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-teal-600 shadow-sm">
+          <div className="bg-gradient-to-br from-white via-pink-50/40 to-orange-50/40 px-6 py-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-purple-600 shadow-sm">
               <Cat className="h-7 w-7" />
             </div>
             <h1 className="font-brand text-3xl font-bold tracking-tight text-slate-700">
@@ -142,7 +142,7 @@ export function AuthPage() {
 
           {mode === 'verify-sent' ? (
             <div className="space-y-4 px-6 py-8 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-600">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 text-purple-600">
                 <MailCheck className="h-7 w-7" />
               </div>
               <h2 className="font-brand text-xl font-bold text-slate-700">
@@ -227,7 +227,7 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={() => switchMode('forgot')}
-                    className="text-xs font-semibold text-teal-600 hover:text-emerald-600"
+                    className="text-xs font-semibold text-purple-600 hover:text-orange-500"
                   >
                     {t.auth.forgotPassword}
                   </button>
@@ -269,17 +269,17 @@ export function AuthPage() {
                         setForm((prev) => ({ ...prev, bio: event.target.value }))
                       }
                       rows={3}
-                      className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+                      className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
                     />
                   </label>
-                  <p className="rounded-2xl bg-teal-50/70 px-3 py-2 text-xs text-slate-500">
+                  <p className="rounded-2xl bg-pink-50/70 px-3 py-2 text-xs text-slate-500">
                     {t.auth.avatarAfterVerify}
                   </p>
                 </>
               ) : null}
 
               {error ? (
-                <p className="rounded-2xl bg-teal-50/80 px-3 py-2 text-sm text-rose-400">
+                <p className="rounded-2xl bg-purple-50/80 px-3 py-2 text-sm text-rose-400">
                   {error}
                 </p>
               ) : null}
@@ -307,7 +307,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => switchMode('login')}
-                  className="w-full text-center text-sm font-semibold text-slate-500 hover:text-teal-600"
+                  className="w-full text-center text-sm font-semibold text-slate-500 hover:text-purple-600"
                 >
                   {t.auth.backToLogin}
                 </button>
@@ -344,7 +344,7 @@ function AuthField({
         required={required}
         minLength={type === 'password' ? 6 : undefined}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
       />
     </label>
   )

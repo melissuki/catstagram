@@ -26,7 +26,7 @@ export function MessagesPage() {
               <button
                 type="button"
                 onClick={() => setActiveConversationId(null)}
-                className="text-sm font-semibold text-teal-600"
+                className="text-sm font-semibold text-purple-600"
               >
                 ← {t.common.back}
               </button>

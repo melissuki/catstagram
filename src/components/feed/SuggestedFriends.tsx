@@ -46,7 +46,7 @@ export function SuggestedFriends() {
               <Avatar
                 src={
                   cat.avatar ||
-                  'https://placehold.co/100x100/ccfbf1/334155?text=Cat'
+                  'https://placehold.co/100x100/fce7f3/334155?text=Cat'
                 }
                 alt={cat.name}
                 size="md"
@@ -72,7 +72,7 @@ export function SuggestedFriends() {
                   onClick={() => {
                     void startChatWith(cat.id).then(() => navigate('/messages'))
                   }}
-                  className="rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 px-3 py-1.5 text-xs font-bold text-teal-700 transition hover:from-teal-100 hover:to-emerald-100"
+                  className="rounded-xl bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 px-3 py-1.5 text-xs font-bold text-purple-700 transition hover:from-purple-100 hover:via-pink-100 hover:to-orange-100"
                 >
                   {t.feed.message}
                 </button>

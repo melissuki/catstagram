@@ -86,8 +86,8 @@ export function ResetPasswordPage() {
       </div>
 
       <div className="w-full max-w-md animate-fade-up overflow-hidden card-panel">
-        <div className="bg-gradient-to-br from-white via-teal-50/40 to-emerald-50/50 px-6 py-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-teal-600 shadow-sm">
+        <div className="bg-gradient-to-br from-white via-pink-50/40 to-orange-50/40 px-6 py-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-purple-600 shadow-sm">
             <LockKeyhole className="h-7 w-7" />
           </div>
           <h1 className="font-brand text-2xl font-bold text-slate-700">
@@ -98,12 +98,12 @@ export function ResetPasswordPage() {
 
         {!ready ? (
           <div className="space-y-4 px-6 py-8 text-center">
-            <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-teal-600" />
+            <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-purple-600" />
             <p className="text-sm text-slate-500">{t.auth.waitingRecovery}</p>
             <p className="text-xs text-slate-400">{t.auth.recoveryHint}</p>
             <Link
               to="/auth"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-teal-600 hover:text-emerald-600"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-orange-500"
             >
               <Cat className="h-4 w-4" />
               {t.auth.backToLogin}
@@ -124,7 +124,7 @@ export function ResetPasswordPage() {
                 minLength={6}
                 required
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
               />
             </label>
 
@@ -138,12 +138,12 @@ export function ResetPasswordPage() {
                 minLength={6}
                 required
                 onChange={(event) => setConfirm(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
               />
             </label>
 
             {error ? (
-              <p className="rounded-2xl bg-teal-50/80 px-3 py-2 text-sm text-rose-400">
+              <p className="rounded-2xl bg-purple-50/80 px-3 py-2 text-sm text-rose-400">
                 {error}
               </p>
             ) : null}

@@ -38,7 +38,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <Avatar
             src={
               post.authorAvatar ||
-              'https://placehold.co/100x100/ccfbf1/334155?text=Cat'
+              'https://placehold.co/100x100/fce7f3/334155?text=Cat'
             }
             alt={post.authorName}
             size="md"
@@ -67,7 +67,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
         ) : null}
       </header>
 
-      <div className="aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-teal-50/40">
+      <div className="aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-pink-50/40">
         <img
           src={post.image}
           alt={post.caption}
@@ -80,13 +80,13 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <button
             type="button"
             onClick={() => void toggleLike(post.id)}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 transition hover:text-teal-600"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 transition hover:text-purple-600"
             aria-label={post.likedByMe ? t.feed.unlike : t.feed.like}
           >
             <Heart
               className={`h-5 w-5 ${
                 post.likedByMe
-                  ? 'fill-teal-400 text-teal-500'
+                  ? 'fill-pink-400 text-pink-500'
                   : 'text-slate-400'
               }`}
             />
@@ -111,7 +111,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-lg bg-gradient-to-r from-teal-50 to-emerald-50 px-2 py-0.5 text-xs font-semibold text-teal-700"
+                className="rounded-lg bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 px-2 py-0.5 text-xs font-semibold text-purple-700"
               >
                 {tag}
               </span>
@@ -145,12 +145,12 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             placeholder={t.feed.addComment}
-            className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-teal-300 focus:bg-white"
+            className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-pink-300 focus:bg-white"
           />
           <button
             type="submit"
             disabled={!comment.trim()}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-r from-teal-400 to-emerald-400 text-white shadow-sm transition hover:from-teal-500 hover:to-emerald-500 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 text-white shadow-sm transition hover:from-purple-500 hover:via-pink-500 hover:to-orange-500 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400"
             aria-label={t.feed.post}
           >
             <Send className="h-4 w-4" />

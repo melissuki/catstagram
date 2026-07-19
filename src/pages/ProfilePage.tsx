@@ -87,7 +87,7 @@ export function ProfilePage() {
       <section className="card-panel animate-fade-up p-5 sm:p-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <Avatar
-            src={currentUser.avatar || 'https://placehold.co/200x200/ccfbf1/334155?text=Cat'}
+            src={currentUser.avatar || 'https://placehold.co/200x200/fce7f3/334155?text=Cat'}
             alt={currentUser.name}
             size="xl"
             ring
@@ -115,12 +115,12 @@ export function ProfilePage() {
             <button
               type="button"
               onClick={() => setEditing((prev) => !prev)}
-              className="mt-4 rounded-2xl bg-teal-50 px-4 py-2 text-sm font-bold text-teal-600 transition hover:bg-teal-100"
+              className="mt-4 rounded-2xl bg-purple-50 px-4 py-2 text-sm font-bold text-purple-600 transition hover:bg-pink-100"
             >
               {editing ? t.profile.cancel : t.profile.edit}
             </button>
             {saved ? (
-              <p className="mt-2 text-sm font-semibold text-emerald-600">
+              <p className="mt-2 text-sm font-semibold text-pink-600">
                 {t.profile.saved}
               </p>
             ) : null}
@@ -168,7 +168,7 @@ export function ProfilePage() {
                   setForm((prev) => ({ ...prev, bio: event.target.value }))
                 }
                 rows={3}
-                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
               />
             </label>
             {error ? (
@@ -243,7 +243,7 @@ function Field({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
       />
     </label>
   )

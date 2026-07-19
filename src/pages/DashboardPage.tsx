@@ -22,7 +22,7 @@ export function DashboardPage() {
 
       <section className="card-panel animate-fade-up p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-600">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 text-purple-600">
             <CalendarHeart className="h-5 w-5" />
           </div>
           <div>
@@ -34,11 +34,11 @@ export function DashboardPage() {
         </div>
 
         <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/80 bg-gradient-to-br from-teal-50/50 to-emerald-50/40 px-4 py-3">
+          <div className="rounded-2xl border border-white/80 bg-gradient-to-br from-purple-50/50 via-pink-50/40 to-orange-50/30 px-4 py-3">
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {t.dashboard.streakLabel}
             </dt>
-            <dd className="mt-1 font-brand text-2xl font-bold text-teal-600">
+            <dd className="mt-1 font-brand text-2xl font-bold text-purple-600">
               {streak.count} 🔥
             </dd>
           </div>

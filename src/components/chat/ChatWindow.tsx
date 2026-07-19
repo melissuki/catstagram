@@ -51,11 +51,11 @@ export function ChatWindow() {
           <p className="text-sm font-bold text-slate-700">
             {conversation.participantName}
           </p>
-          <p className="text-xs font-medium text-emerald-600">{t.messages.online}</p>
+          <p className="text-xs font-medium text-pink-600">{t.messages.online}</p>
         </div>
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-transparent to-teal-50/20 px-4 py-4">
+      <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-transparent to-pink-50/20 px-4 py-4">
         {conversation.messages.map((message) => {
           const mine = message.senderId === currentUser.id
           return (
@@ -66,7 +66,7 @@ export function ChatWindow() {
               <div
                 className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
                   mine
-                    ? 'rounded-br-md bg-gradient-to-r from-teal-400 to-emerald-400 text-white'
+                    ? 'rounded-br-md bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 text-white'
                     : 'rounded-bl-md border border-white/80 bg-white/90 text-slate-700'
                 }`}
               >
@@ -86,7 +86,7 @@ export function ChatWindow() {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={t.messages.placeholder}
-          className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-teal-300"
+          className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-pink-300"
         />
         <button
           type="submit"

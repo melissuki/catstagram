@@ -37,7 +37,7 @@ export function ChatList() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t.messages.search}
-          className="mt-3 w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-teal-300"
+          className="mt-3 w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-pink-300"
         />
       </div>
 
@@ -56,7 +56,7 @@ export function ChatList() {
                 onClick={() => setActiveConversationId(chat.id)}
                 className={`flex w-full items-center gap-3 border-b border-white/60 px-4 py-3 text-left transition duration-300 ${
                   active
-                    ? 'bg-gradient-to-r from-teal-50/90 to-emerald-50/70'
+                    ? 'bg-gradient-to-r from-purple-50/90 via-pink-50/70 to-orange-50/60'
                     : 'hover:bg-slate-50/80'
                 }`}
               >
@@ -71,7 +71,7 @@ export function ChatList() {
                       {chat.participantName}
                     </p>
                     {chat.unread > 0 ? (
-                      <span className="rounded-full bg-gradient-to-r from-teal-400 to-emerald-400 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                      <span className="rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
                         {chat.unread}
                       </span>
                     ) : null}
