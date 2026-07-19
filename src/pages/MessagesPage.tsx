@@ -8,7 +8,7 @@ export function MessagesPage() {
   const { t } = useTranslation()
 
   return (
-    <div className="mx-auto h-[calc(100dvh-8.5rem)] max-w-5xl overflow-hidden rounded-[1.75rem] border border-cream-deep bg-surface/90 shadow-[0_16px_40px_-24px_rgba(92,90,102,0.4)] backdrop-blur-sm lg:h-[calc(100dvh-4rem)]">
+    <div className="mx-auto h-[calc(100dvh-8.5rem)] max-w-5xl overflow-hidden rounded-[1.75rem] border border-cream-deep bg-surface/90 shadow-[0_16px_40px_-24px_rgba(63,79,77,0.18)] backdrop-blur-sm lg:h-[calc(100dvh-4rem)]">
       <div className="grid h-full lg:grid-cols-[300px_minmax(0,1fr)]">
         <div
           className={`h-full border-r border-cream-deep ${

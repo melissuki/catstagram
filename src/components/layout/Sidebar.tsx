@@ -15,7 +15,7 @@ import { Avatar } from '@/components/common/Avatar'
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
     isActive
-      ? 'bg-peach text-white shadow-[0_8px_20px_-10px_rgba(244,162,97,0.9)]'
+      ? 'bg-peach text-white shadow-[0_8px_20px_-10px_rgba(61,184,176,0.85)]'
       : 'text-slate-muted hover:bg-peach-light/70 hover:text-slate'
   }`
 

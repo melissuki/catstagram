@@ -78,7 +78,7 @@ export function AuthPage() {
       <div className="w-full max-w-md space-y-4">
         {!isConfigured ? <SetupBanner /> : null}
 
-        <div className="animate-fade-up overflow-hidden rounded-[2rem] border border-cream-deep bg-surface/90 shadow-[0_24px_60px_-30px_rgba(92,90,102,0.45)] backdrop-blur-md">
+        <div className="animate-fade-up overflow-hidden rounded-[2rem] border border-cream-deep bg-surface/90 shadow-[0_24px_60px_-30px_rgba(63,79,77,0.22)] backdrop-blur-md">
           <div className="bg-gradient-to-br from-peach-light via-cream to-peach-soft/50 px-6 py-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-peach shadow-sm">
               <Cat className="h-7 w-7" />

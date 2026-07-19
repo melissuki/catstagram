@@ -3,7 +3,11 @@
  * Backed by Supabase (Auth, Postgres, Storage, Realtime).
  * Kept as a thin layer so pages/context stay framework-agnostic.
  */
-export { isSupabaseConfigured } from '@/lib/supabase'
+export {
+  supabase,
+  isSupabaseConfigured,
+  requireSupabase,
+} from '@/services/supabaseClient'
 
 export {
   signUp,
@@ -36,6 +40,7 @@ export {
   getOrCreateConversation,
   sendMessage,
   subscribeToMessages,
+  subscribeToAllMessages,
   subscribeToFeed,
 } from '@/services/messages'
 

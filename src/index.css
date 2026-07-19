@@ -4,19 +4,25 @@
   --font-brand: 'Comfortaa', system-ui, sans-serif;
   --font-sans: 'Nunito', system-ui, sans-serif;
 
-  --color-cream: #fdf6f0;
-  --color-cream-soft: #faf0e8;
-  --color-cream-deep: #f3e4d6;
-  --color-peach: #f4a261;
-  --color-peach-soft: #ffd6c0;
-  --color-peach-light: #ffe8dc;
-  --color-coral: #e89a7a;
-  --color-slate: #5c5a66;
-  --color-slate-muted: #8b8798;
-  --color-slate-soft: #b8b4c0;
-  --color-surface: #fffcfa;
-  --color-streak: #e07a5f;
-  --color-success: #7eb89a;
+  /* Soft mint / creamy off-white surfaces */
+  --color-cream: #f3faf7;
+  --color-cream-soft: #eaf7f2;
+  --color-cream-deep: #d5ebe3;
+
+  /* Soft turquoise / teal accents (kept as peach-* class names for compatibility) */
+  --color-peach: #3db8b0;
+  --color-peach-soft: #b8ebe6;
+  --color-peach-light: #dff7f4;
+  --color-coral: #2f9e97;
+
+  /* Soft readable text */
+  --color-slate: #3f4f4d;
+  --color-slate-muted: #6b7f7c;
+  --color-slate-soft: #a3b5b1;
+
+  --color-surface: #fbfffd;
+  --color-streak: #45c4a4;
+  --color-success: #5cb896;
 }
 
 @layer base {
@@ -27,9 +33,9 @@
   body {
     @apply m-0 min-h-dvh bg-cream font-sans text-slate;
     background-image:
-      radial-gradient(ellipse 80% 50% at 10% -10%, rgb(255 214 192 / 0.55), transparent),
-      radial-gradient(ellipse 60% 40% at 90% 0%, rgb(244 162 97 / 0.18), transparent),
-      radial-gradient(ellipse 50% 30% at 50% 100%, rgb(243 228 214 / 0.8), transparent);
+      radial-gradient(ellipse 80% 50% at 8% -8%, rgb(184 235 230 / 0.55), transparent),
+      radial-gradient(ellipse 55% 40% at 92% 0%, rgb(61 184 176 / 0.16), transparent),
+      radial-gradient(ellipse 50% 35% at 50% 100%, rgb(213 235 227 / 0.85), transparent);
     background-attachment: fixed;
   }
 
@@ -50,7 +56,7 @@
   }
 
   .story-ring {
-    background: linear-gradient(135deg, #ffd6c0 0%, #f4a261 55%, #e89a7a 100%);
+    background: linear-gradient(135deg, #b8ebe6 0%, #3db8b0 50%, #2f9e97 100%);
   }
 
   .animate-fade-up {
@@ -80,10 +86,10 @@
 @keyframes soft-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(244 162 97 / 0.35);
+    box-shadow: 0 0 0 0 rgb(61 184 176 / 0.35);
   }
   50% {
-    box-shadow: 0 0 0 10px rgb(244 162 97 / 0);
+    box-shadow: 0 0 0 10px rgb(61 184 176 / 0);
   }
 }
 

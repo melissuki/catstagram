@@ -58,7 +58,7 @@ This creates:
 | `posts` / `likes` / `comments` | Global feed |
 | `follows` | Friendship / follow graph |
 | `conversations` / `conversation_members` / `messages` | DMs |
-| Storage buckets `avatars`, `posts` | Image uploads |
+| Storage bucket `cat-photos` | Profile + post image uploads |
 | RLS policies | Secure per-user access |
 | Realtime publication | Live messages + feed updates |
 | `create_conversation_with()` | Safe 1:1 chat bootstrap under RLS |
@@ -89,18 +89,19 @@ Supabase → **Authentication → Providers → Email**:
 
 - `ImageUpload` uses `<input type="file" accept="image/*" />`
 - Instant preview via `URL.createObjectURL(file)`
-- Upload path: `Storage` bucket (`avatars` / `posts`) → public URL saved on profile/post rows
+- Upload path: public Storage bucket `cat-photos` (`profiles/…`, `posts/…`) → public URL saved on profile/post rows
 
 ### API / state
 
 - Mock `localStorage` auth + seed arrays removed (Mama Streak + language stay local)
 - `AppContext` syncs with Supabase session + Postgres
 - Service layer under `src/services/`:
+  - `supabaseClient.ts` — **central** `createClient` using `VITE_SUPABASE_*` env vars
   - `auth.ts` — signup / login / logout
   - `posts.ts` — global feed, create post, likes, comments
-  - `messages.ts` — conversations + Realtime listeners
+  - `messages.ts` — conversations + Realtime `channel()` listeners
   - `profiles.ts` — profile CRUD + follows
-  - `storage.ts` — image uploads
+  - `storage.ts` — image uploads to the `cat-photos` bucket
   - `api.ts` — facade re-exports
 
 ### Realtime

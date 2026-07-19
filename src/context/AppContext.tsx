@@ -16,7 +16,7 @@ import type {
   Post,
   Story,
 } from '@/types'
-import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase'
+import { isSupabaseConfigured, requireSupabase } from '@/services/supabaseClient'
 import * as api from '@/services/api'
 import {
   loadStreakFromStorage,
@@ -92,38 +92,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, next)
   }, [])
 
-  const refreshFeed = useCallback(async () => {
-    if (!currentUser) return
-    setFeedLoading(true)
-    setFeedError(null)
-    try {
-      const [feedData, storyData, following] = await Promise.all([
-        api.fetchFeed(currentUser.id),
-        api.fetchStories(currentUser.id),
-        api.fetchFollowingIds(currentUser.id),
-      ])
-      setPosts(feedData)
-      setStories(storyData)
-      setFollowingIds(following)
-    } catch (error) {
-      setFeedError(error instanceof Error ? error.message : 'Failed to load feed')
-    } finally {
-      setFeedLoading(false)
-    }
-  }, [currentUser])
+  const refreshFeed = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!currentUser) return
+      const silent = options?.silent ?? false
+      if (!silent) {
+        setFeedLoading(true)
+        setFeedError(null)
+      }
+      try {
+        const [feedData, storyData, following] = await Promise.all([
+          api.fetchFeed(currentUser.id),
+          api.fetchStories(currentUser.id),
+          api.fetchFollowingIds(currentUser.id),
+        ])
+        setPosts(feedData)
+        setStories(storyData)
+        setFollowingIds(following)
+      } catch (error) {
+        if (!silent) {
+          setFeedError(
+            error instanceof Error ? error.message : 'Failed to load feed',
+          )
+        } else {
+          console.error(error)
+        }
+      } finally {
+        if (!silent) setFeedLoading(false)
+      }
+    },
+    [currentUser],
+  )
 
-  const refreshChats = useCallback(async () => {
-    if (!currentUser) return
-    setChatsLoading(true)
-    try {
-      const data = await api.fetchConversations(currentUser.id)
-      setConversations(data)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setChatsLoading(false)
-    }
-  }, [currentUser])
+  const refreshChats = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!currentUser) return
+      const silent = options?.silent ?? false
+      if (!silent) setChatsLoading(true)
+      try {
+        const data = await api.fetchConversations(currentUser.id)
+        setConversations(data)
+      } catch (error) {
+        console.error(error)
+      } finally {
+        if (!silent) setChatsLoading(false)
+      }
+    },
+    [currentUser],
+  )
 
   const bootstrapSession = useCallback(async (userId: string) => {
     const profile = await api.fetchProfileById(userId)
@@ -181,13 +197,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void refreshChats()
   }, [currentUser, refreshFeed, refreshChats])
 
+  // Live global feed: posts / likes / comments via supabase.channel()
   useEffect(() => {
     if (!currentUser || !isSupabaseConfigured) return
     return api.subscribeToFeed(() => {
-      void refreshFeed()
+      void refreshFeed({ silent: true })
     })
   }, [currentUser, refreshFeed])
 
+  // Live chat thread for the open conversation
   useEffect(() => {
     if (!activeConversationId || !isSupabaseConfigured) return
 
@@ -206,6 +224,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
     })
   }, [activeConversationId])
+
+  // Keep DM list previews in sync for any conversation the user belongs to
+  useEffect(() => {
+    if (!currentUser || !isSupabaseConfigured) return
+
+    return api.subscribeToAllMessages((message) => {
+      setConversations((prev) => {
+        const exists = prev.some((chat) => chat.id === message.conversationId)
+        if (!exists) {
+          void refreshChats({ silent: true })
+          return prev
+        }
+
+        return prev
+          .map((chat) => {
+            if (chat.id !== message.conversationId) return chat
+            if (chat.messages.some((item) => item.id === message.id)) return chat
+            return {
+              ...chat,
+              messages: [...chat.messages, message],
+              lastMessage: message.text,
+              updatedAt: message.createdAt,
+            }
+          })
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+          )
+      })
+    })
+  }, [currentUser, refreshChats])
 
   useEffect(() => {
     saveStreakToStorage(streak)

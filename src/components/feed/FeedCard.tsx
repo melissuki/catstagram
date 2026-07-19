@@ -30,7 +30,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
 
   return (
     <article
-      className="animate-fade-up overflow-hidden rounded-[1.75rem] border border-cream-deep bg-surface/90 shadow-[0_10px_30px_-18px_rgba(92,90,102,0.35)] backdrop-blur-sm"
+      className="animate-fade-up overflow-hidden rounded-[1.75rem] border border-cream-deep bg-surface/90 shadow-[0_10px_30px_-18px_rgba(63,79,77,0.18)] backdrop-blur-sm"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
@@ -38,7 +38,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <Avatar
             src={
               post.authorAvatar ||
-              'https://placehold.co/100x100/ffd6c0/5c5a66?text=Cat'
+              'https://placehold.co/100x100/b8ebe6/3f4f4d?text=Cat'
             }
             alt={post.authorName}
             size="md"

@@ -1,4 +1,4 @@
-import { requireSupabase } from '@/lib/supabase'
+import { requireSupabase } from '@/services/supabaseClient'
 import { uploadAvatar } from '@/services/storage'
 import { fetchProfileById, updateProfileRecord } from '@/services/profiles'
 import type { CatProfile } from '@/types'
@@ -37,24 +37,25 @@ export async function signUp(input: SignUpInput): Promise<CatProfile> {
   if (error) throw new Error(error.message)
   if (!data.user) throw new Error('Signup failed — no user returned.')
 
-  let avatarUrl = ''
-  if (input.avatarFile) {
-    avatarUrl = await uploadAvatar(data.user.id, input.avatarFile)
-    await updateProfileRecord(data.user.id, {
-      name: input.name.trim(),
-      breed: input.breed.trim(),
-      age: input.age,
-      bio: input.bio.trim(),
-      avatar_url: avatarUrl,
-    })
-  }
-
   // Session may be null if email confirmation is required
   if (!data.session) {
     throw new Error(
       'Account created. Confirm your email in Supabase Auth settings (or disable email confirmation), then sign in.',
     )
   }
+
+  let avatarUrl: string | undefined
+  if (input.avatarFile) {
+    avatarUrl = await uploadAvatar(data.user.id, input.avatarFile)
+  }
+
+  await updateProfileRecord(data.user.id, {
+    name: input.name.trim(),
+    breed: input.breed.trim() || 'Mixed',
+    age: input.age,
+    bio: input.bio.trim(),
+    ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+  })
 
   return fetchProfileById(data.user.id)
 }

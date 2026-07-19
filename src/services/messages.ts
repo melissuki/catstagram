@@ -1,4 +1,4 @@
-import { requireSupabase } from '@/lib/supabase'
+import { requireSupabase } from '@/services/supabaseClient'
 import { mapConversation, mapMessage, mapProfile } from '@/services/mappers'
 import type { Conversation, Message } from '@/types'
 import type { DbMessage, DbProfile } from '@/types/database'
@@ -142,6 +142,36 @@ export function subscribeToMessages(
       },
       (payload) => {
         onMessage(mapMessage(payload.new as DbMessage))
+      },
+    )
+    .subscribe()
+
+  return () => {
+    void supabase.removeChannel(channel)
+  }
+}
+
+/** Listens for any new message so conversation previews stay live. */
+export function subscribeToAllMessages(
+  onMessage: (message: Message & { conversationId: string }) => void,
+) {
+  const supabase = requireSupabase()
+
+  const channel = supabase
+    .channel('messages-global')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      },
+      (payload) => {
+        const row = payload.new as DbMessage
+        onMessage({
+          ...mapMessage(row),
+          conversationId: row.conversation_id,
+        })
       },
     )
     .subscribe()

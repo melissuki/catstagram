@@ -46,7 +46,7 @@ export function SuggestedFriends() {
               <Avatar
                 src={
                   cat.avatar ||
-                  'https://placehold.co/100x100/ffd6c0/5c5a66?text=Cat'
+                  'https://placehold.co/100x100/b8ebe6/3f4f4d?text=Cat'
                 }
                 alt={cat.name}
                 size="md"

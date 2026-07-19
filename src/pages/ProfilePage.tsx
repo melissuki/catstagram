@@ -87,7 +87,7 @@ export function ProfilePage() {
       <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/90 p-5 sm:p-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <Avatar
-            src={currentUser.avatar || 'https://placehold.co/200x200/ffd6c0/5c5a66?text=Cat'}
+            src={currentUser.avatar || 'https://placehold.co/200x200/b8ebe6/3f4f4d?text=Cat'}
             alt={currentUser.name}
             size="xl"
             ring

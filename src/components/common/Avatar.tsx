@@ -1,5 +1,5 @@
 const FALLBACK =
-  'https://placehold.co/200x200/ffd6c0/5c5a66?text=Cat'
+  'https://placehold.co/200x200/b8ebe6/3f4f4d?text=Cat'
 
 interface AvatarProps {
   src: string

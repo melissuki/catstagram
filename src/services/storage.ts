@@ -1,24 +1,35 @@
-import { requireSupabase } from '@/lib/supabase'
+import { requireSupabase } from '@/services/supabaseClient'
 
-function extensionFromFile(file: File): string {
-  const fromName = file.name.split('.').pop()?.toLowerCase()
-  if (fromName && fromName.length <= 5) return fromName
-  if (file.type === 'image/png') return 'png'
-  if (file.type === 'image/webp') return 'webp'
-  if (file.type === 'image/gif') return 'gif'
-  return 'jpg'
+/** Single public bucket created in the Supabase dashboard. */
+export const STORAGE_BUCKET = 'cat-photos' as const
+
+function sanitizeFileName(name: string): string {
+  const base = name.split(/[/\\]/).pop() || 'image.jpg'
+  const cleaned = base
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^\.+/, '')
+    .replace(/^\-+|\-+$/g, '')
+
+  return cleaned.slice(0, 80) || 'image.jpg'
 }
 
-export async function uploadImage(
-  bucket: 'avatars' | 'posts',
-  userId: string,
+function buildObjectPath(folder: 'profiles' | 'posts', file: File): string {
+  const safeName = sanitizeFileName(file.name)
+  // Clean single-segment folders — no leading/trailing or double slashes
+  return `${folder}/${Date.now()}-${safeName}`
+}
+
+async function uploadToCatPhotos(
+  folder: 'profiles' | 'posts',
   file: File,
 ): Promise<string> {
   const supabase = requireSupabase()
-  const ext = extensionFromFile(file)
-  const path = `${userId}/${crypto.randomUUID()}.${ext}`
+  const path = buildObjectPath(folder, file)
 
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+  const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
     cacheControl: '3600',
     upsert: false,
     contentType: file.type || 'image/jpeg',
@@ -28,14 +39,14 @@ export async function uploadImage(
     throw new Error(error.message)
   }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
   return data.publicUrl
 }
 
-export async function uploadAvatar(userId: string, file: File): Promise<string> {
-  return uploadImage('avatars', userId, file)
+export async function uploadAvatar(_userId: string, file: File): Promise<string> {
+  return uploadToCatPhotos('profiles', file)
 }
 
-export async function uploadPostImage(userId: string, file: File): Promise<string> {
-  return uploadImage('posts', userId, file)
+export async function uploadPostImage(_userId: string, file: File): Promise<string> {
+  return uploadToCatPhotos('posts', file)
 }

@@ -1,4 +1,4 @@
-import { requireSupabase } from '@/lib/supabase'
+import { requireSupabase } from '@/services/supabaseClient'
 import {
   extractTags,
   mapComment,

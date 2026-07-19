@@ -1,4 +1,4 @@
-import { requireSupabase } from '@/lib/supabase'
+import { requireSupabase } from '@/services/supabaseClient'
 import { mapProfile } from '@/services/mappers'
 import { uploadAvatar } from '@/services/storage'
 import type { CatProfile } from '@/types'
