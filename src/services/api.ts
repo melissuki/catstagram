@@ -14,8 +14,11 @@ export {
   signIn,
   signOut,
   getSessionUserId,
+  resetPasswordForEmail,
+  updatePassword,
   type SignUpInput,
   type SignInInput,
+  type SignUpResult,
 } from '@/services/auth'
 
 export {

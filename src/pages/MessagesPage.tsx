@@ -8,10 +8,10 @@ export function MessagesPage() {
   const { t } = useTranslation()
 
   return (
-    <div className="mx-auto h-[calc(100dvh-8.5rem)] max-w-5xl overflow-hidden rounded-[1.75rem] border border-cream-deep bg-surface/90 shadow-[0_16px_40px_-24px_rgba(63,79,77,0.18)] backdrop-blur-sm lg:h-[calc(100dvh-4rem)]">
+    <div className="card-panel mx-auto h-[calc(100dvh-8.5rem)] max-w-5xl overflow-hidden lg:h-[calc(100dvh-4rem)]">
       <div className="grid h-full lg:grid-cols-[300px_minmax(0,1fr)]">
         <div
-          className={`h-full border-r border-cream-deep ${
+          className={`h-full border-r border-white/70 ${
             activeConversationId ? 'hidden lg:block' : 'block'
           }`}
         >
@@ -22,11 +22,11 @@ export function MessagesPage() {
           className={`h-full ${activeConversationId ? 'block' : 'hidden lg:block'}`}
         >
           {activeConversationId ? (
-            <div className="border-b border-cream-deep px-3 py-2 lg:hidden">
+            <div className="border-b border-white/70 px-3 py-2 lg:hidden">
               <button
                 type="button"
                 onClick={() => setActiveConversationId(null)}
-                className="text-sm font-semibold text-peach"
+                className="text-sm font-semibold text-teal-600"
               >
                 ← {t.common.back}
               </button>

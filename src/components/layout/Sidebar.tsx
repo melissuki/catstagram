@@ -13,10 +13,10 @@ import { LanguageToggle } from '@/components/common/LanguageToggle'
 import { Avatar } from '@/components/common/Avatar'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+  `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition duration-300 ${
     isActive
-      ? 'bg-peach text-white shadow-[0_8px_20px_-10px_rgba(61,184,176,0.85)]'
-      : 'text-slate-muted hover:bg-peach-light/70 hover:text-slate'
+      ? 'nav-active'
+      : 'text-slate-500 hover:bg-gradient-to-r hover:from-teal-50/80 hover:to-emerald-50/80 hover:text-slate-700'
   }`
 
 export function Sidebar() {
@@ -26,16 +26,16 @@ export function Sidebar() {
   if (!currentUser) return null
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-cream-deep bg-surface/70 px-4 py-6 backdrop-blur-md lg:flex xl:w-72">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-white/60 bg-white/50 px-4 py-6 backdrop-blur-xl lg:flex xl:w-72">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-peach-light text-peach">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-300/40 to-emerald-300/40 text-teal-600 shadow-sm">
           <Cat className="h-6 w-6" />
         </div>
         <div>
-          <p className="font-brand text-xl font-bold tracking-tight text-slate">
+          <p className="font-brand text-xl font-bold tracking-tight text-slate-700">
             {t.appName}
           </p>
-          <p className="text-xs text-slate-muted">soft social for cats</p>
+          <p className="text-xs text-slate-500">soft social for cats</p>
         </div>
       </div>
 
@@ -58,21 +58,21 @@ export function Sidebar() {
         </NavLink>
       </nav>
 
-      <div className="mt-6 space-y-3 border-t border-cream-deep pt-4">
+      <div className="mt-6 space-y-3 border-t border-white/70 pt-4">
         <LanguageToggle />
-        <div className="flex items-center gap-3 rounded-2xl bg-cream-soft px-3 py-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 px-3 py-3 shadow-sm">
           <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-slate">
+            <p className="truncate text-sm font-bold text-slate-700">
               {currentUser.name}
             </p>
-            <p className="truncate text-xs text-slate-muted">{currentUser.breed}</p>
+            <p className="truncate text-xs text-slate-500">{currentUser.breed}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => void logout()}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-muted transition hover:bg-cream-deep hover:text-slate"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-white/70 hover:text-slate-700"
         >
           <LogOut className="h-4 w-4" />
           {t.nav.logout}

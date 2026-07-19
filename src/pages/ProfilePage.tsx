@@ -84,22 +84,22 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/90 p-5 sm:p-6">
+      <section className="card-panel animate-fade-up p-5 sm:p-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <Avatar
-            src={currentUser.avatar || 'https://placehold.co/200x200/b8ebe6/3f4f4d?text=Cat'}
+            src={currentUser.avatar || 'https://placehold.co/200x200/ccfbf1/334155?text=Cat'}
             alt={currentUser.name}
             size="xl"
             ring
           />
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="font-brand text-2xl font-bold text-slate">
+            <h2 className="font-brand text-2xl font-bold text-slate-700">
               {currentUser.name}
             </h2>
-            <p className="mt-1 text-sm text-slate-muted">
+            <p className="mt-1 text-sm text-slate-500">
               {currentUser.breed} · {currentUser.age} {t.profile.years}
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-slate">
+            <p className="mt-3 text-sm leading-relaxed text-slate-700">
               {currentUser.bio}
             </p>
 
@@ -115,12 +115,12 @@ export function ProfilePage() {
             <button
               type="button"
               onClick={() => setEditing((prev) => !prev)}
-              className="mt-4 rounded-2xl bg-peach-light px-4 py-2 text-sm font-bold text-peach transition hover:bg-peach-soft"
+              className="mt-4 rounded-2xl bg-teal-50 px-4 py-2 text-sm font-bold text-teal-600 transition hover:bg-teal-100"
             >
               {editing ? t.profile.cancel : t.profile.edit}
             </button>
             {saved ? (
-              <p className="mt-2 text-sm font-semibold text-success">
+              <p className="mt-2 text-sm font-semibold text-emerald-600">
                 {t.profile.saved}
               </p>
             ) : null}
@@ -159,7 +159,7 @@ export function ProfilePage() {
               />
             </div>
             <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {t.profile.bio}
               </span>
               <textarea
@@ -168,16 +168,16 @@ export function ProfilePage() {
                   setForm((prev) => ({ ...prev, bio: event.target.value }))
                 }
                 rows={3}
-                className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
+                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
               />
             </label>
             {error ? (
-              <p className="sm:col-span-2 text-sm text-streak">{error}</p>
+              <p className="sm:col-span-2 text-sm text-rose-400">{error}</p>
             ) : null}
             <button
               type="submit"
               disabled={submitting}
-              className="sm:col-span-2 rounded-2xl bg-peach px-4 py-3 text-sm font-bold text-white transition hover:bg-coral disabled:opacity-60"
+              className="btn-primary sm:col-span-2"
             >
               {submitting ? t.common.loading : t.profile.save}
             </button>
@@ -186,19 +186,19 @@ export function ProfilePage() {
       </section>
 
       <section className="animate-fade-up">
-        <h3 className="mb-3 px-1 font-brand text-lg font-bold text-slate">
+        <h3 className="mb-3 px-1 font-brand text-lg font-bold text-slate-700">
           {t.profile.posts}
         </h3>
         {loadingPosts ? (
           <LoadingSpinner label={t.common.loading} />
         ) : posts.length === 0 ? (
-          <p className="text-sm text-slate-muted">{t.feed.noPosts}</p>
+          <p className="text-sm text-slate-500">{t.feed.noPosts}</p>
         ) : (
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="aspect-square overflow-hidden rounded-xl bg-cream-deep sm:rounded-2xl"
+                className="aspect-square overflow-hidden rounded-xl bg-slate-100 sm:rounded-2xl"
               >
                 <img
                   src={post.image}
@@ -217,8 +217,8 @@ export function ProfilePage() {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="font-brand text-lg font-bold text-slate">{value}</p>
-      <p className="text-xs text-slate-muted">{label}</p>
+      <p className="font-brand text-lg font-bold text-slate-700">{value}</p>
+      <p className="text-xs text-slate-500">{label}</p>
     </div>
   )
 }
@@ -236,14 +236,14 @@ function Field({
 }) {
   return (
     <label>
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
+        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
       />
     </label>
   )

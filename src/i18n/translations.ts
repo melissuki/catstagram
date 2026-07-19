@@ -88,6 +88,36 @@ export const translations = {
       title: 'Connect Supabase to go live',
       body: 'Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then run supabase/schema.sql. See README for the full checklist.',
     },
+    auth: {
+      forgotPassword: 'Forgot password?',
+      forgotTitle: 'Reset your password',
+      forgotSubtitle: 'Enter your email and we will send a secure reset link.',
+      sendResetLink: 'Send reset link',
+      resetEmailSent: 'Password reset link sent! Check your inbox.',
+      verifyEmailToast:
+        'A verification link has been sent to your email! Please check your inbox to activate your cat profile.',
+      verifyEmailBody:
+        'A verification link has been sent to your email! Please check your inbox to activate your cat profile.',
+      checkInboxTitle: 'Check your inbox',
+      verifyEmailHint:
+        'You cannot enter Catstagram until the email is confirmed. After clicking the link, come back and sign in.',
+      avatarAfterVerify:
+        'Optional now — if email confirmation is on, you can also add a photo after verifying.',
+      backToLogin: 'Back to sign in',
+      welcomeBack: 'Welcome back to Catstagram!',
+      authFailed: 'Authentication failed',
+      resetTitle: 'Choose a new password',
+      resetSubtitle: 'Create a fresh password for your cat profile.',
+      newPassword: 'New password',
+      confirmPassword: 'Confirm password',
+      updatePassword: 'Update password',
+      passwordUpdated: 'Password updated! Please sign in with your new password.',
+      passwordTooShort: 'Password must be at least 6 characters.',
+      passwordMismatch: 'Passwords do not match.',
+      waitingRecovery: 'Validating your reset link…',
+      recoveryHint:
+        'Open this page from the email link. If it does not unlock, request a new reset from Sign in.',
+    },
     common: {
       loading: 'Loading…',
       language: 'Language',
@@ -182,6 +212,36 @@ export const translations = {
     setup: {
       title: 'Canlıya geçmek için Supabase bağla',
       body: 'VITE_SUPABASE_URL ve VITE_SUPABASE_ANON_KEY ekle, sonra supabase/schema.sql çalıştır. Detaylar README’de.',
+    },
+    auth: {
+      forgotPassword: 'Şifreni mi unuttun?',
+      forgotTitle: 'Şifreni sıfırla',
+      forgotSubtitle: 'E-postanı yaz, güvenli bir sıfırlama bağlantısı gönderelim.',
+      sendResetLink: 'Sıfırlama bağlantısı gönder',
+      resetEmailSent: 'Şifre sıfırlama bağlantısı gönderildi! Gelen kutunu kontrol et.',
+      verifyEmailToast:
+        'E-postana bir doğrulama bağlantısı gönderildi! Kedi profilini etkinleştirmek için gelen kutunu kontrol et.',
+      verifyEmailBody:
+        'E-postana bir doğrulama bağlantısı gönderildi! Kedi profilini etkinleştirmek için gelen kutunu kontrol et.',
+      checkInboxTitle: 'Gelen kutunu kontrol et',
+      verifyEmailHint:
+        'E-posta doğrulanmadan Catstagram’a giremezsin. Bağlantıya tıkladıktan sonra geri dönüp giriş yap.',
+      avatarAfterVerify:
+        'Şimdilik isteğe bağlı — e-posta onayı açıksa, doğruladıktan sonra da fotoğraf ekleyebilirsin.',
+      backToLogin: 'Girişe dön',
+      welcomeBack: "Catstagram'a tekrar hoş geldin!",
+      authFailed: 'Kimlik doğrulama başarısız',
+      resetTitle: 'Yeni bir şifre seç',
+      resetSubtitle: 'Kedi profilin için taze bir şifre oluştur.',
+      newPassword: 'Yeni şifre',
+      confirmPassword: 'Şifreyi onayla',
+      updatePassword: 'Şifreyi güncelle',
+      passwordUpdated: 'Şifre güncellendi! Lütfen yeni şifrenle giriş yap.',
+      passwordTooShort: 'Şifre en az 6 karakter olmalı.',
+      passwordMismatch: 'Şifreler eşleşmiyor.',
+      waitingRecovery: 'Sıfırlama bağlantın doğrulanıyor…',
+      recoveryHint:
+        'Bu sayfayı e-postadaki bağlantıdan aç. Açılmazsa Giriş’ten yeni bir sıfırlama iste.',
     },
     common: {
       loading: 'Yükleniyor…',

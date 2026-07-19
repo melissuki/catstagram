@@ -65,13 +65,29 @@ This creates:
 
 If a Realtime `alter publication` line errors because a table is already added, you can ignore that specific error.
 
-### 4) Auth settings (recommended for friends)
+### 4) Auth settings (email verify + password reset)
 
 Supabase → **Authentication → Providers → Email**:
 
 - Enable Email provider
-- For a private friends app, turn **off** “Confirm email” so signup works immediately  
-  (or keep it on and use the confirmation link)
+- Keep **Confirm email** ON so friends verify before entering the app
+
+Supabase → **Authentication → URL Configuration**:
+
+- **Site URL:** your Vercel domain (e.g. `https://YOUR-APP.vercel.app`)
+- **Redirect URLs** allow list (add all that apply):
+  - `http://localhost:5173/**`
+  - `https://YOUR-APP.vercel.app/**`
+  - `https://YOUR-APP.vercel.app/auth`
+  - `https://YOUR-APP.vercel.app/reset-password`
+
+App env:
+
+```env
+VITE_APP_URL=https://YOUR-APP.vercel.app
+```
+
+(Locally you can omit it — the app falls back to `window.location.origin`.)
 
 ### 5) Invite friends
 

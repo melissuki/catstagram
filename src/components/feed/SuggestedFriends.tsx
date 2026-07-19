@@ -34,8 +34,8 @@ export function SuggestedFriends() {
   if (!cats.length) return null
 
   return (
-    <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/80 p-4 backdrop-blur-sm">
-      <h3 className="font-brand text-base font-bold text-slate">
+    <section className="card-panel animate-fade-up p-4">
+      <h3 className="font-brand text-base font-bold text-slate-700">
         {t.feed.follow}
       </h3>
       <ul className="mt-3 space-y-3">
@@ -46,24 +46,24 @@ export function SuggestedFriends() {
               <Avatar
                 src={
                   cat.avatar ||
-                  'https://placehold.co/100x100/b8ebe6/3f4f4d?text=Cat'
+                  'https://placehold.co/100x100/ccfbf1/334155?text=Cat'
                 }
                 alt={cat.name}
                 size="md"
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-slate">{cat.name}</p>
-                <p className="truncate text-xs text-slate-muted">{cat.breed}</p>
+                <p className="truncate text-sm font-bold text-slate-700">{cat.name}</p>
+                <p className="truncate text-xs text-slate-500">{cat.breed}</p>
               </div>
               <div className="flex flex-col gap-1">
                 <button
                   type="button"
                   onClick={() => void toggleFollow(cat.id)}
-                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                  className={
                     isFollowing
-                      ? 'bg-cream-deep text-slate-muted'
-                      : 'bg-peach text-white hover:bg-coral'
-                  }`}
+                      ? 'rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500'
+                      : 'btn-primary-sm'
+                  }
                 >
                   {isFollowing ? t.feed.following : t.feed.follow}
                 </button>
@@ -72,7 +72,7 @@ export function SuggestedFriends() {
                   onClick={() => {
                     void startChatWith(cat.id).then(() => navigate('/messages'))
                   }}
-                  className="rounded-xl bg-peach-light px-3 py-1.5 text-xs font-bold text-peach hover:bg-peach-soft"
+                  className="rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 px-3 py-1.5 text-xs font-bold text-teal-700 transition hover:from-teal-100 hover:to-emerald-100"
                 >
                   {t.feed.message}
                 </button>

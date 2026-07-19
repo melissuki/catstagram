@@ -30,7 +30,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
 
   return (
     <article
-      className="animate-fade-up overflow-hidden rounded-[1.75rem] border border-cream-deep bg-surface/90 shadow-[0_10px_30px_-18px_rgba(63,79,77,0.18)] backdrop-blur-sm"
+      className="card-panel animate-fade-up overflow-hidden"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
@@ -38,15 +38,15 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <Avatar
             src={
               post.authorAvatar ||
-              'https://placehold.co/100x100/b8ebe6/3f4f4d?text=Cat'
+              'https://placehold.co/100x100/ccfbf1/334155?text=Cat'
             }
             alt={post.authorName}
             size="md"
             ring
           />
           <div>
-            <p className="text-sm font-bold text-slate">{post.authorName}</p>
-            <p className="text-xs text-slate-muted">
+            <p className="text-sm font-bold text-slate-700">{post.authorName}</p>
+            <p className="text-xs text-slate-500">
               {new Date(post.createdAt).toLocaleDateString()}
             </p>
           </div>
@@ -56,18 +56,18 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <button
             type="button"
             onClick={() => void toggleFollow(post.authorId)}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+            className={
               isFollowing
-                ? 'bg-cream-deep text-slate-muted'
-                : 'bg-peach-light text-peach hover:bg-peach-soft'
-            }`}
+                ? 'rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500'
+                : 'btn-primary-sm'
+            }
           >
             {isFollowing ? t.feed.following : t.feed.follow}
           </button>
         ) : null}
       </header>
 
-      <div className="aspect-square w-full overflow-hidden bg-cream-deep">
+      <div className="aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-teal-50/40">
         <img
           src={post.image}
           alt={post.caption}
@@ -80,12 +80,14 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <button
             type="button"
             onClick={() => void toggleLike(post.id)}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate transition hover:text-streak"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 transition hover:text-teal-600"
             aria-label={post.likedByMe ? t.feed.unlike : t.feed.like}
           >
             <Heart
               className={`h-5 w-5 ${
-                post.likedByMe ? 'fill-streak text-streak' : 'text-slate-muted'
+                post.likedByMe
+                  ? 'fill-teal-400 text-teal-500'
+                  : 'text-slate-400'
               }`}
             />
             {post.likes}
@@ -93,7 +95,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
           <button
             type="button"
             onClick={() => setShowComments((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-muted transition hover:text-slate"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700"
           >
             <MessageCircle className="h-5 w-5" />
             {post.comments.length}
@@ -101,7 +103,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
         </div>
 
         <div>
-          <p className="text-sm leading-relaxed text-slate">
+          <p className="text-sm leading-relaxed text-slate-700">
             <span className="font-bold">{post.authorName}</span>{' '}
             {post.caption}
           </p>
@@ -109,7 +111,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-lg bg-peach-light/70 px-2 py-0.5 text-xs font-semibold text-peach"
+                className="rounded-lg bg-gradient-to-r from-teal-50 to-emerald-50 px-2 py-0.5 text-xs font-semibold text-teal-700"
               >
                 {tag}
               </span>
@@ -118,19 +120,19 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
         </div>
 
         {showComments ? (
-          <div className="space-y-2 rounded-2xl bg-cream-soft/80 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-muted">
+          <div className="space-y-2 rounded-2xl border border-white/80 bg-slate-50/80 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {t.feed.comments}
             </p>
             {post.comments.length === 0 ? (
-              <p className="text-sm text-slate-muted">…</p>
+              <p className="text-sm text-slate-500">…</p>
             ) : (
               post.comments.map((item) => (
                 <div key={item.id} className="flex gap-2 text-sm">
                   <Avatar src={item.authorAvatar} alt={item.authorName} size="sm" />
                   <p>
-                    <span className="font-bold text-slate">{item.authorName}</span>{' '}
-                    <span className="text-slate-muted">{item.text}</span>
+                    <span className="font-bold text-slate-700">{item.authorName}</span>{' '}
+                    <span className="text-slate-500">{item.text}</span>
                   </p>
                 </div>
               ))
@@ -143,12 +145,12 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             placeholder={t.feed.addComment}
-            className="w-full rounded-2xl border border-cream-deep bg-cream-soft/60 px-3 py-2.5 text-sm outline-none transition focus:border-peach-soft focus:bg-surface"
+            className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-teal-300 focus:bg-white"
           />
           <button
             type="submit"
             disabled={!comment.trim()}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-peach text-white transition hover:bg-coral disabled:cursor-not-allowed disabled:bg-cream-deep disabled:text-slate-soft"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-r from-teal-400 to-emerald-400 text-white shadow-sm transition hover:from-teal-500 hover:to-emerald-500 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400"
             aria-label={t.feed.post}
           >
             <Send className="h-4 w-4" />

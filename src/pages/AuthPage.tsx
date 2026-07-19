@@ -1,19 +1,30 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Cat, LoaderCircle } from 'lucide-react'
+import { Cat, LoaderCircle, MailCheck } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { LanguageToggle } from '@/components/common/LanguageToggle'
 import { ImageUpload } from '@/components/common/ImageUpload'
 import { SetupBanner } from '@/components/common/SetupBanner'
 
+type AuthMode = 'login' | 'signup' | 'forgot' | 'verify-sent'
+
 export function AuthPage() {
-  const { signIn, signUp, isAuthenticated, isConfigured, authReady } = useApp()
+  const {
+    signIn,
+    signUp,
+    requestPasswordReset,
+    isAuthenticated,
+    isConfigured,
+    authReady,
+  } = useApp()
   const { t } = useTranslation()
-  const [mode, setMode] = useState<'login' | 'signup'>('signup')
+  const [mode, setMode] = useState<AuthMode>('signup')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [pendingEmail, setPendingEmail] = useState('')
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -25,7 +36,7 @@ export function AuthPage() {
 
   if (!authReady) {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-sm text-slate-muted">
+      <div className="flex min-h-dvh items-center justify-center text-sm text-slate-500">
         {t.common.loading}
       </div>
     )
@@ -33,6 +44,11 @@ export function AuthPage() {
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />
+  }
+
+  const switchMode = (next: AuthMode) => {
+    setMode(next)
+    setError(null)
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -46,13 +62,24 @@ export function AuthPage() {
     setError(null)
 
     try {
+      if (mode === 'forgot') {
+        await requestPasswordReset(form.email)
+        toast.success(t.auth.resetEmailSent)
+        switchMode('login')
+        return
+      }
+
       if (mode === 'login') {
         await signIn({
           email: form.email,
           password: form.password,
         })
-      } else {
-        await signUp({
+        toast.success(t.auth.welcomeBack)
+        return
+      }
+
+      if (mode === 'signup') {
+        const result = await signUp({
           email: form.email,
           password: form.password,
           name: form.name.trim() || 'Cat',
@@ -61,9 +88,21 @@ export function AuthPage() {
           bio: form.bio.trim(),
           avatarFile,
         })
+
+        if (result.status === 'verification_required') {
+          setPendingEmail(result.email)
+          toast.info(t.auth.verifyEmailToast)
+          switchMode('verify-sent')
+          return
+        }
+
+        toast.success(t.auth.welcomeBack)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      const message =
+        err instanceof Error ? err.message : t.auth.authFailed
+      setError(message)
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -78,130 +117,195 @@ export function AuthPage() {
       <div className="w-full max-w-md space-y-4">
         {!isConfigured ? <SetupBanner /> : null}
 
-        <div className="animate-fade-up overflow-hidden rounded-[2rem] border border-cream-deep bg-surface/90 shadow-[0_24px_60px_-30px_rgba(63,79,77,0.22)] backdrop-blur-md">
-          <div className="bg-gradient-to-br from-peach-light via-cream to-peach-soft/50 px-6 py-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-peach shadow-sm">
+        <div className="animate-fade-up overflow-hidden card-panel">
+          <div className="bg-gradient-to-br from-white via-teal-50/40 to-emerald-50/50 px-6 py-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-teal-600 shadow-sm">
               <Cat className="h-7 w-7" />
             </div>
-            <h1 className="font-brand text-3xl font-bold tracking-tight text-slate">
+            <h1 className="font-brand text-3xl font-bold tracking-tight text-slate-700">
               {t.appName}
             </h1>
-            <p className="mt-2 text-sm text-slate-muted">{t.profile.loginSubtitle}</p>
+            <p className="mt-2 text-sm text-slate-500">{t.profile.loginSubtitle}</p>
           </div>
 
-          <form
-            onSubmit={(event) => void handleSubmit(event)}
-            className="space-y-3 px-6 py-6"
-          >
-            <div className="flex rounded-2xl bg-cream-soft p-1">
+          {mode === 'verify-sent' ? (
+            <div className="space-y-4 px-6 py-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-600">
+                <MailCheck className="h-7 w-7" />
+              </div>
+              <h2 className="font-brand text-xl font-bold text-slate-700">
+                {t.auth.checkInboxTitle}
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-500">
+                {t.auth.verifyEmailBody}{' '}
+                <span className="font-semibold text-slate-700">{pendingEmail}</span>
+              </p>
+              <p className="text-xs text-slate-400">{t.auth.verifyEmailHint}</p>
               <button
                 type="button"
-                onClick={() => setMode('signup')}
-                className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${
-                  mode === 'signup'
-                    ? 'bg-surface text-peach shadow-sm'
-                    : 'text-slate-muted'
-                }`}
+                onClick={() => switchMode('login')}
+                className="btn-primary w-full"
               >
-                {t.profile.signupCta}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('login')}
-                className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${
-                  mode === 'login'
-                    ? 'bg-surface text-peach shadow-sm'
-                    : 'text-slate-muted'
-                }`}
-              >
-                {t.profile.loginCta}
+                {t.auth.backToLogin}
               </button>
             </div>
+          ) : (
+            <form
+              onSubmit={(event) => void handleSubmit(event)}
+              className="space-y-3 px-6 py-6"
+            >
+              {mode !== 'forgot' ? (
+                <div className="flex rounded-2xl bg-slate-50/80 p-1">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('signup')}
+                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition duration-300 ${
+                      mode === 'signup'
+                        ? 'nav-active shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {t.profile.signupCta}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('login')}
+                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition duration-300 ${
+                      mode === 'login'
+                        ? 'nav-active shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {t.profile.loginCta}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="font-brand text-lg font-bold text-slate-700">
+                    {t.auth.forgotTitle}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {t.auth.forgotSubtitle}
+                  </p>
+                </div>
+              )}
 
-            <AuthField
-              label={t.profile.email}
-              type="email"
-              value={form.email}
-              onChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
-              required
-            />
-            <AuthField
-              label={t.profile.password}
-              type="password"
-              value={form.password}
-              onChange={(value) =>
-                setForm((prev) => ({ ...prev, password: value }))
-              }
-              required
-            />
+              <AuthField
+                label={t.profile.email}
+                type="email"
+                value={form.email}
+                onChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
+                required
+              />
 
-            {mode === 'signup' ? (
-              <>
+              {mode !== 'forgot' ? (
                 <AuthField
-                  label={t.profile.name}
-                  value={form.name}
-                  onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
+                  label={t.profile.password}
+                  type="password"
+                  value={form.password}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, password: value }))
+                  }
                   required
                 />
-                <AuthField
-                  label={t.profile.breed}
-                  value={form.breed}
-                  onChange={(value) =>
-                    setForm((prev) => ({ ...prev, breed: value }))
-                  }
-                />
-                <AuthField
-                  label={t.profile.age}
-                  type="number"
-                  value={form.age}
-                  onChange={(value) => setForm((prev) => ({ ...prev, age: value }))}
-                />
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
-                    {t.profile.bio}
-                  </span>
-                  <textarea
-                    value={form.bio}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, bio: event.target.value }))
-                    }
-                    rows={3}
-                    className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
-                  />
-                </label>
-                <ImageUpload
-                  label={t.profile.avatar}
-                  value={avatarFile}
-                  onChange={setAvatarFile}
-                  helperText={t.feed.photoHint}
-                  compact
-                />
-              </>
-            ) : null}
+              ) : null}
 
-            {error ? (
-              <p className="rounded-2xl bg-peach-light/70 px-3 py-2 text-sm text-streak">
-                {error}
-              </p>
-            ) : null}
+              {mode === 'login' ? (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    className="text-xs font-semibold text-teal-600 hover:text-emerald-600"
+                  >
+                    {t.auth.forgotPassword}
+                  </button>
+                </div>
+              ) : null}
 
-            <button
-              type="submit"
-              disabled={submitting || !isConfigured}
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-peach py-3 text-sm font-bold text-white transition hover:bg-coral disabled:cursor-not-allowed disabled:bg-cream-deep disabled:text-slate-soft"
-            >
-              {submitting ? (
+              {mode === 'signup' ? (
                 <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  {t.common.loading}
+                  <AuthField
+                    label={t.profile.name}
+                    value={form.name}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, name: value }))
+                    }
+                    required
+                  />
+                  <AuthField
+                    label={t.profile.breed}
+                    value={form.breed}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, breed: value }))
+                    }
+                  />
+                  <AuthField
+                    label={t.profile.age}
+                    type="number"
+                    value={form.age}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, age: value }))
+                    }
+                  />
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t.profile.bio}
+                    </span>
+                    <textarea
+                      value={form.bio}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, bio: event.target.value }))
+                      }
+                      rows={3}
+                      className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
+                    />
+                  </label>
+                  <ImageUpload
+                    label={t.profile.avatar}
+                    value={avatarFile}
+                    onChange={setAvatarFile}
+                    helperText={t.auth.avatarAfterVerify}
+                    compact
+                  />
                 </>
-              ) : mode === 'login' ? (
-                t.profile.loginCta
-              ) : (
-                t.profile.signupCta
-              )}
-            </button>
-          </form>
+              ) : null}
+
+              {error ? (
+                <p className="rounded-2xl bg-teal-50/80 px-3 py-2 text-sm text-rose-400">
+                  {error}
+                </p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={submitting || !isConfigured}
+                className="btn-primary mt-2 w-full"
+              >
+                {submitting ? (
+                  <>
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    {t.common.loading}
+                  </>
+                ) : mode === 'login' ? (
+                  t.profile.loginCta
+                ) : mode === 'forgot' ? (
+                  t.auth.sendResetLink
+                ) : (
+                  t.profile.signupCta
+                )}
+              </button>
+
+              {mode === 'forgot' ? (
+                <button
+                  type="button"
+                  onClick={() => switchMode('login')}
+                  className="w-full text-center text-sm font-semibold text-slate-500 hover:text-teal-600"
+                >
+                  {t.auth.backToLogin}
+                </button>
+              ) : null}
+            </form>
+          )}
         </div>
       </div>
     </div>
@@ -223,15 +327,16 @@ function AuthField({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </span>
       <input
         type={type}
         value={value}
         required={required}
+        minLength={type === 'password' ? 6 : undefined}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
+        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
       />
     </label>
   )

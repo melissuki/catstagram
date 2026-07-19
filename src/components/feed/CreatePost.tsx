@@ -38,10 +38,10 @@ export function CreatePost() {
   }
 
   return (
-    <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/90 p-4 backdrop-blur-sm sm:p-5">
+    <section className="card-panel animate-fade-up p-4 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-peach" />
-        <h3 className="font-brand text-base font-bold text-slate">
+        <Sparkles className="h-4 w-4 text-teal-500" />
+        <h3 className="font-brand text-base font-bold text-slate-700">
           {t.feed.createPost}
         </h3>
       </div>
@@ -60,18 +60,18 @@ export function CreatePost() {
           onChange={(event) => setCaption(event.target.value)}
           placeholder={t.feed.captionPlaceholder}
           rows={3}
-          className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
+          className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-teal-300"
         />
 
-        {error ? <p className="text-sm font-medium text-streak">{error}</p> : null}
+        {error ? <p className="text-sm font-medium text-rose-400">{error}</p> : null}
         {success ? (
-          <p className="text-sm font-medium text-success">{t.feed.posted}</p>
+          <p className="text-sm font-medium text-emerald-600">{t.feed.posted}</p>
         ) : null}
 
         <button
           type="submit"
           disabled={submitting || !file}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-peach px-4 py-3 text-sm font-bold text-white transition hover:bg-coral disabled:cursor-not-allowed disabled:bg-cream-deep disabled:text-slate-soft"
+          className="btn-primary w-full"
         >
           {submitting ? (
             <>

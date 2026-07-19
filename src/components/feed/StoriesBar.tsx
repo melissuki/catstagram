@@ -9,14 +9,14 @@ export function StoriesBar() {
   if (!currentUser) return null
 
   return (
-    <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/80 px-3 py-4 backdrop-blur-sm sm:px-4">
-      <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-muted">
+    <section className="card-panel animate-fade-up px-3 py-4 sm:px-4">
+      <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
         {t.feed.stories}
       </p>
       <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none">
         <button type="button" className="flex shrink-0 flex-col items-center gap-1.5">
           <Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" ring />
-          <span className="max-w-[4.5rem] truncate text-xs font-semibold text-slate">
+          <span className="max-w-[4.5rem] truncate text-xs font-semibold text-slate-700">
             {currentUser.name}
           </span>
         </button>
@@ -34,7 +34,7 @@ export function StoriesBar() {
               ring={!story.viewed}
               className={story.viewed ? 'opacity-70' : ''}
             />
-            <span className="max-w-[4.5rem] truncate text-xs font-medium text-slate-muted">
+            <span className="max-w-[4.5rem] truncate text-xs font-medium text-slate-500">
               {story.authorName}
             </span>
           </button>

@@ -31,8 +31,10 @@ interface AppContextValue {
   setLanguage: (language: Language) => void
   isAuthenticated: boolean
   currentUser: CatProfile | null
-  signUp: (input: api.SignUpInput) => Promise<void>
+  signUp: (input: api.SignUpInput) => Promise<api.SignUpResult>
   signIn: (input: api.SignInInput) => Promise<void>
+  requestPasswordReset: (email: string) => Promise<void>
+  updatePassword: (newPassword: string) => Promise<void>
   logout: () => Promise<void>
   updateProfile: (updates: {
     name: string
@@ -261,13 +263,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [streak])
 
   const signUp = useCallback(async (input: api.SignUpInput) => {
-    const profile = await api.signUp(input)
-    setCurrentUser(profile)
+    const result = await api.signUp(input)
+    if (result.status === 'authenticated') {
+      setCurrentUser(result.profile)
+    }
+    return result
   }, [])
 
   const signIn = useCallback(async (input: api.SignInInput) => {
     const profile = await api.signIn(input)
     setCurrentUser(profile)
+  }, [])
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    await api.resetPasswordForEmail(email)
+  }, [])
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    await api.updatePassword(newPassword)
   }, [])
 
   const logout = useCallback(async () => {
@@ -418,6 +431,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentUser,
       signUp,
       signIn,
+      requestPasswordReset,
+      updatePassword,
       logout,
       updateProfile,
       posts,
@@ -447,6 +462,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentUser,
       signUp,
       signIn,
+      requestPasswordReset,
+      updatePassword,
       logout,
       updateProfile,
       posts,

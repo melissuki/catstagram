@@ -1,5 +1,5 @@
 const FALLBACK =
-  'https://placehold.co/200x200/b8ebe6/3f4f4d?text=Cat'
+  'https://placehold.co/200x200/ccfbf1/334155?text=Cat'
 
 interface AvatarProps {
   src: string
@@ -27,15 +27,15 @@ export function Avatar({
     <img
       src={src || FALLBACK}
       alt={alt}
-      className={`${sizeMap[size]} rounded-full object-cover bg-peach-light ${className}`}
+      className={`${sizeMap[size]} rounded-full object-cover bg-teal-50 ${className}`}
     />
   )
 
   if (!ring) return image
 
   return (
-    <div className="story-ring rounded-full p-[2.5px]">
-      <div className="rounded-full bg-cream p-[2px]">{image}</div>
+    <div className="story-ring rounded-full p-[2.5px] shadow-sm">
+      <div className="rounded-full bg-white p-[2px]">{image}</div>
     </div>
   )
 }
