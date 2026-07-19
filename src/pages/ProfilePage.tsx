@@ -1,0 +1,217 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import type { CatProfile, Post } from '@/types'
+import { fetchUserPosts } from '@/services/api'
+import { useApp } from '@/context/AppContext'
+import { useTranslation } from '@/hooks/useTranslation'
+import { Avatar } from '@/components/common/Avatar'
+import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+
+export function ProfilePage() {
+  const { currentUser, updateProfile, followingIds } = useApp()
+  const { t } = useTranslation()
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loadingPosts, setLoadingPosts] = useState(true)
+  const [form, setForm] = useState<Partial<CatProfile>>({})
+
+  useEffect(() => {
+    if (!currentUser) return
+    setForm({
+      name: currentUser.name,
+      breed: currentUser.breed,
+      age: currentUser.age,
+      bio: currentUser.bio,
+      avatar: currentUser.avatar,
+    })
+  }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser) return
+    let cancelled = false
+
+    const load = async () => {
+      setLoadingPosts(true)
+      try {
+        const data = await fetchUserPosts(currentUser.id)
+        if (!cancelled) setPosts(data)
+      } catch (error) {
+        console.error(error)
+      } finally {
+        if (!cancelled) setLoadingPosts(false)
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser])
+
+  if (!currentUser) return null
+
+  const handleSave = (event: FormEvent) => {
+    event.preventDefault()
+    updateProfile({
+      name: form.name?.trim() || currentUser.name,
+      breed: form.breed?.trim() || currentUser.breed,
+      age: Number(form.age) || currentUser.age,
+      bio: form.bio?.trim() || currentUser.bio,
+      avatar: form.avatar?.trim() || currentUser.avatar,
+    })
+    setEditing(false)
+    setSaved(true)
+    window.setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/90 p-5 sm:p-6">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <Avatar
+            src={currentUser.avatar}
+            alt={currentUser.name}
+            size="xl"
+            ring
+          />
+          <div className="flex-1 text-center sm:text-left">
+            <h2 className="font-brand text-2xl font-bold text-slate">
+              {currentUser.name}
+            </h2>
+            <p className="mt-1 text-sm text-slate-muted">
+              {currentUser.breed} · {currentUser.age} {t.profile.years}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-slate">
+              {currentUser.bio}
+            </p>
+
+            <div className="mt-4 flex justify-center gap-6 sm:justify-start">
+              <Stat label={t.profile.posts} value={posts.length || currentUser.postsCount} />
+              <Stat label={t.profile.followers} value={currentUser.followers} />
+              <Stat label={t.profile.following} value={followingIds.length} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setEditing((prev) => !prev)}
+              className="mt-4 rounded-2xl bg-peach-light px-4 py-2 text-sm font-bold text-peach transition hover:bg-peach-soft"
+            >
+              {editing ? t.profile.cancel : t.profile.edit}
+            </button>
+            {saved ? (
+              <p className="mt-2 text-sm font-semibold text-success">
+                {t.profile.saved}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {editing ? (
+          <form onSubmit={handleSave} className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Field
+              label={t.profile.name}
+              value={form.name ?? ''}
+              onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
+            />
+            <Field
+              label={t.profile.breed}
+              value={form.breed ?? ''}
+              onChange={(value) => setForm((prev) => ({ ...prev, breed: value }))}
+            />
+            <Field
+              label={t.profile.age}
+              type="number"
+              value={String(form.age ?? '')}
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, age: Number(value) }))
+              }
+            />
+            <Field
+              label={t.profile.avatar}
+              value={form.avatar ?? ''}
+              onChange={(value) => setForm((prev) => ({ ...prev, avatar: value }))}
+            />
+            <label className="sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
+                {t.profile.bio}
+              </span>
+              <textarea
+                value={form.bio ?? ''}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, bio: event.target.value }))
+                }
+                rows={3}
+                className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
+              />
+            </label>
+            <button
+              type="submit"
+              className="sm:col-span-2 rounded-2xl bg-peach px-4 py-3 text-sm font-bold text-white transition hover:bg-coral"
+            >
+              {t.profile.save}
+            </button>
+          </form>
+        ) : null}
+      </section>
+
+      <section className="animate-fade-up">
+        <h3 className="mb-3 px-1 font-brand text-lg font-bold text-slate">
+          {t.profile.posts}
+        </h3>
+        {loadingPosts ? (
+          <LoadingSpinner label={t.common.loading} />
+        ) : (
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            {posts.map((post) => (
+              <div
+                key={post.id}
+                className="aspect-square overflow-hidden rounded-xl bg-cream-deep sm:rounded-2xl"
+              >
+                <img
+                  src={post.image}
+                  alt={post.caption}
+                  className="h-full w-full object-cover transition hover:scale-105"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="font-brand text-lg font-bold text-slate">{value}</p>
+      <p className="text-xs text-slate-muted">{label}</p>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  type?: string
+}) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
+      />
+    </label>
+  )
+}
