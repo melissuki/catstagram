@@ -263,11 +263,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [streak])
 
   const signUp = useCallback(async (input: api.SignUpInput) => {
-    const result = await api.signUp(input)
-    if (result.status === 'authenticated') {
-      setCurrentUser(result.profile)
-    }
-    return result
+    // Never auto-login after signup — email must be verified first.
+    return api.signUp(input)
   }, [])
 
   const signIn = useCallback(async (input: api.SignInInput) => {

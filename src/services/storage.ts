@@ -3,98 +3,48 @@ import { requireSupabase } from '@/services/supabaseClient'
 /** Must match the public bucket name in the Supabase Storage dashboard. */
 export const STORAGE_BUCKET = 'cat-photos' as const
 
-/**
- * Strip folder separators and non-ASCII / special characters so the object
- * key never breaks Supabase Storage URL parsing (Turkish chars, spaces, etc.).
- */
-function cleanFileName(originalName: string): string {
-  const baseName = originalName.split(/[/\\]/).pop() || 'image.jpg'
+function buildFilePath(file: File): string {
+  const cleanExtension = (file.name.split('.').pop() || 'jpg')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
 
-  // Normalize Turkish / accented letters to ASCII-ish forms where possible
-  const ascii = baseName
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ğ/g, 'g')
-    .replace(/Ğ/g, 'G')
-    .replace(/ü/g, 'u')
-    .replace(/Ü/g, 'U')
-    .replace(/ş/g, 's')
-    .replace(/Ş/g, 'S')
-    .replace(/ı/g, 'i')
-    .replace(/İ/g, 'I')
-    .replace(/ö/g, 'o')
-    .replace(/Ö/g, 'O')
-    .replace(/ç/g, 'c')
-    .replace(/Ç/g, 'C')
+  const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${cleanExtension || 'jpg'}`
 
-  const cleaned = ascii
-    .trim()
-    .replace(/\s+/g, '_') // spaces → underscore (Supabase-safe)
-    .replace(/[^a-zA-Z0-9._-]/g, '_') // drop anything else
-    .replace(/_+/g, '_')
-    .replace(/^\.+/, '')
-    .replace(/^_+|_+$/g, '')
+  // Explicitly starts with a valid text folder — NO leading slash '/'
+  const filePath = `public/${uniqueFileName}`
 
-  if (!cleaned) return 'image.jpg'
-
-  // Ensure there is a simple extension
-  if (!/\.[a-zA-Z0-9]{2,5}$/.test(cleaned)) {
-    return `${cleaned}.jpg`
-  }
-
-  return cleaned.slice(0, 80)
-}
-
-/**
- * Build a Storage object key that NEVER starts with `/` and never contains
- * empty segments or double slashes.
- *
- * Examples:
- *   posts/1710000000000-my_cat.jpg
- *   profiles/1710000000000-avatar.png
- */
-function buildFilePath(folder: 'posts' | 'profiles', file: File): string {
-  const safeName = cleanFileName(file.name)
-  const filePath = `${folder}/${Date.now()}-${safeName}`
-
-  // Hard guardrails against invalid Supabase object keys
   return filePath
-    .replace(/^\/+/, '') // no leading slash
-    .replace(/\/{2,}/g, '/') // no double slashes
-    .replace(/\/+$/, '') // no trailing slash
 }
 
-async function uploadToCatPhotos(
-  folder: 'posts' | 'profiles',
-  file: File,
-): Promise<string> {
+async function uploadToCatPhotos(file: File): Promise<string> {
   const supabase = requireSupabase()
-  const filePath = buildFilePath(folder, file)
+  const filePath = buildFilePath(file)
 
-  if (!filePath || filePath.startsWith('/') || filePath.includes('//')) {
-    throw new Error(`Invalid storage path: ${filePath}`)
-  }
+  console.log('CRITICAL UPLOAD PATH:', filePath)
 
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
+  const { data, error } = await supabase.storage
+    .from('cat-photos')
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false,
-      contentType: file.type || 'image/jpeg',
     })
 
   if (error) {
+    console.error('CRITICAL UPLOAD ERROR:', error, { filePath, data })
     throw new Error(error.message)
   }
 
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
-  return data.publicUrl
+  const { data: publicData } = supabase.storage
+    .from('cat-photos')
+    .getPublicUrl(filePath)
+
+  return publicData.publicUrl
 }
 
 export async function uploadAvatar(_userId: string, file: File): Promise<string> {
-  return uploadToCatPhotos('profiles', file)
+  return uploadToCatPhotos(file)
 }
 
 export async function uploadPostImage(_userId: string, file: File): Promise<string> {
-  return uploadToCatPhotos('posts', file)
+  return uploadToCatPhotos(file)
 }

@@ -95,9 +95,9 @@ export const translations = {
       sendResetLink: 'Send reset link',
       resetEmailSent: 'Password reset link sent! Check your inbox.',
       verifyEmailToast:
-        'A verification link has been sent to your email! Please check your inbox to activate your cat profile.',
+        'Awesome! Please check your email inbox to verify your account before logging in.',
       verifyEmailBody:
-        'A verification link has been sent to your email! Please check your inbox to activate your cat profile.',
+        'Awesome! Please check your email inbox to verify your account before logging in.',
       checkInboxTitle: 'Check your inbox',
       verifyEmailHint:
         'You cannot enter Catstagram until the email is confirmed. After clicking the link, come back and sign in.',
@@ -220,9 +220,9 @@ export const translations = {
       sendResetLink: 'Sıfırlama bağlantısı gönder',
       resetEmailSent: 'Şifre sıfırlama bağlantısı gönderildi! Gelen kutunu kontrol et.',
       verifyEmailToast:
-        'E-postana bir doğrulama bağlantısı gönderildi! Kedi profilini etkinleştirmek için gelen kutunu kontrol et.',
+        'Harika! Giriş yapmadan önce hesabını doğrulamak için e-posta gelen kutunu kontrol et.',
       verifyEmailBody:
-        'E-postana bir doğrulama bağlantısı gönderildi! Kedi profilini etkinleştirmek için gelen kutunu kontrol et.',
+        'Harika! Giriş yapmadan önce hesabını doğrulamak için e-posta gelen kutunu kontrol et.',
       checkInboxTitle: 'Gelen kutunu kontrol et',
       verifyEmailHint:
         'E-posta doğrulanmadan Catstagram’a giremezsin. Bağlantıya tıkladıktan sonra geri dönüp giriş yap.',

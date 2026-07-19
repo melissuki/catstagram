@@ -5,7 +5,6 @@ import { toast } from 'react-toastify'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { LanguageToggle } from '@/components/common/LanguageToggle'
-import { ImageUpload } from '@/components/common/ImageUpload'
 import { SetupBanner } from '@/components/common/SetupBanner'
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'verify-sent'
@@ -23,7 +22,6 @@ export function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('signup')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [pendingEmail, setPendingEmail] = useState('')
   const [form, setForm] = useState({
     email: '',
@@ -79,6 +77,7 @@ export function AuthPage() {
       }
 
       if (mode === 'signup') {
+        // Isolated signup: auth.signUp only — no profile write / image upload here.
         const result = await signUp({
           email: form.email,
           password: form.password,
@@ -86,19 +85,32 @@ export function AuthPage() {
           breed: form.breed.trim() || 'Mixed',
           age: Number(form.age) || 1,
           bio: form.bio.trim(),
-          avatarFile,
+          avatarFile: null, // photos only after email verification + login
         })
 
-        if (result.status === 'verification_required') {
-          setPendingEmail(result.email)
-          toast.info(t.auth.verifyEmailToast)
-          switchMode('verify-sent')
-          return
-        }
+        setPendingEmail(result.email)
+        toast.success(
+          'Awesome! Please check your email inbox to verify your account before logging in.',
+        )
 
-        toast.success(t.auth.welcomeBack)
+        setForm({
+          email: '',
+          password: '',
+          name: '',
+          breed: '',
+          age: '1',
+          bio: '',
+        })
+        switchMode('verify-sent')
+        return
       }
     } catch (err) {
+      const authErr = err as Error & { status?: number }
+      console.error('[AuthPage] signup/login failed', {
+        message: authErr?.message,
+        status: authErr?.status,
+        err,
+      })
       const message =
         err instanceof Error ? err.message : t.auth.authFailed
       setError(message)
@@ -260,13 +272,9 @@ export function AuthPage() {
                       className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-teal-300"
                     />
                   </label>
-                  <ImageUpload
-                    label={t.profile.avatar}
-                    value={avatarFile}
-                    onChange={setAvatarFile}
-                    helperText={t.auth.avatarAfterVerify}
-                    compact
-                  />
+                  <p className="rounded-2xl bg-teal-50/70 px-3 py-2 text-xs text-slate-500">
+                    {t.auth.avatarAfterVerify}
+                  </p>
                 </>
               ) : null}
 
