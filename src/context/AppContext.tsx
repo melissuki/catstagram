@@ -16,12 +16,8 @@ import type {
   Post,
   Story,
 } from '@/types'
-import {
-  fetchConversations,
-  fetchFeed,
-  fetchStories,
-} from '@/services/api'
-import { CURRENT_USER_ID, mockProfiles } from '@/services/mockData'
+import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase'
+import * as api from '@/services/api'
 import {
   loadStreakFromStorage,
   markFedToday,
@@ -29,70 +25,61 @@ import {
 } from '@/utils/streak'
 
 interface AppContextValue {
+  isConfigured: boolean
+  authReady: boolean
   language: Language
   setLanguage: (language: Language) => void
   isAuthenticated: boolean
   currentUser: CatProfile | null
-  login: (profile: Partial<CatProfile> & Pick<CatProfile, 'name'>) => void
-  logout: () => void
-  updateProfile: (updates: Partial<CatProfile>) => void
+  signUp: (input: api.SignUpInput) => Promise<void>
+  signIn: (input: api.SignInInput) => Promise<void>
+  logout: () => Promise<void>
+  updateProfile: (updates: {
+    name: string
+    breed: string
+    age: number
+    bio: string
+    avatarFile?: File | null
+  }) => Promise<void>
   posts: Post[]
   stories: Story[]
   feedLoading: boolean
   feedError: string | null
   refreshFeed: () => Promise<void>
-  toggleLike: (postId: string) => void
-  addComment: (postId: string, text: string) => void
+  createPost: (file: File, caption: string) => Promise<void>
+  toggleLike: (postId: string) => Promise<void>
+  addComment: (postId: string, text: string) => Promise<void>
   followingIds: string[]
-  toggleFollow: (catId: string) => void
+  toggleFollow: (catId: string) => Promise<void>
+  startChatWith: (friendId: string) => Promise<string>
   conversations: Conversation[]
   activeConversationId: string | null
   setActiveConversationId: (id: string | null) => void
-  sendMessage: (conversationId: string, text: string) => void
+  sendMessage: (conversationId: string, text: string) => Promise<void>
   chatsLoading: boolean
+  refreshChats: () => Promise<void>
   streak: MamaStreak
   feedCat: () => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
 
-const AUTH_STORAGE_KEY = 'catstagram_auth'
 const LANGUAGE_STORAGE_KEY = 'catstagram_language'
-const FOLLOWING_STORAGE_KEY = 'catstagram_following'
 
 function loadLanguage(): Language {
   const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY)
   return stored === 'tr' ? 'tr' : 'en'
 }
 
-function loadAuth(): CatProfile | null {
-  try {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY)
-    if (!stored) return null
-    return JSON.parse(stored) as CatProfile
-  } catch {
-    return null
-  }
-}
-
-function loadFollowing(): string[] {
-  try {
-    const stored = localStorage.getItem(FOLLOWING_STORAGE_KEY)
-    if (!stored) return ['cat-olive']
-    return JSON.parse(stored) as string[]
-  } catch {
-    return ['cat-olive']
-  }
-}
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(loadLanguage)
-  const [currentUser, setCurrentUser] = useState<CatProfile | null>(loadAuth)
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
+  const [currentUser, setCurrentUser] = useState<CatProfile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [stories, setStories] = useState<Story[]>([])
   const [feedLoading, setFeedLoading] = useState(false)
   const [feedError, setFeedError] = useState<string | null>(null)
-  const [followingIds, setFollowingIds] = useState<string[]>(loadFollowing)
+  const [followingIds, setFollowingIds] = useState<string[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     null,
@@ -105,79 +92,204 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, next)
   }, [])
 
-  const login = useCallback(
-    (profile: Partial<CatProfile> & Pick<CatProfile, 'name'>) => {
-      const base = mockProfiles.find((item) => item.id === CURRENT_USER_ID)!
-      const nextUser: CatProfile = {
-        ...base,
-        ...profile,
-        id: CURRENT_USER_ID,
-        name: profile.name,
-      }
-      setCurrentUser(nextUser)
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser))
-    },
-    [],
-  )
-
-  const logout = useCallback(() => {
-    setCurrentUser(null)
-    localStorage.removeItem(AUTH_STORAGE_KEY)
-  }, [])
-
-  const updateProfile = useCallback((updates: Partial<CatProfile>) => {
-    setCurrentUser((prev) => {
-      if (!prev) return prev
-      const next = { ...prev, ...updates }
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
-      return next
-    })
-  }, [])
-
   const refreshFeed = useCallback(async () => {
+    if (!currentUser) return
     setFeedLoading(true)
     setFeedError(null)
     try {
-      const [feedData, storyData] = await Promise.all([
-        fetchFeed(),
-        fetchStories(),
+      const [feedData, storyData, following] = await Promise.all([
+        api.fetchFeed(currentUser.id),
+        api.fetchStories(currentUser.id),
+        api.fetchFollowingIds(currentUser.id),
       ])
       setPosts(feedData)
       setStories(storyData)
+      setFollowingIds(following)
     } catch (error) {
       setFeedError(error instanceof Error ? error.message : 'Failed to load feed')
     } finally {
       setFeedLoading(false)
     }
+  }, [currentUser])
+
+  const refreshChats = useCallback(async () => {
+    if (!currentUser) return
+    setChatsLoading(true)
+    try {
+      const data = await api.fetchConversations(currentUser.id)
+      setConversations(data)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setChatsLoading(false)
+    }
+  }, [currentUser])
+
+  const bootstrapSession = useCallback(async (userId: string) => {
+    const profile = await api.fetchProfileById(userId)
+    setCurrentUser(profile)
   }, [])
 
-  const toggleLike = useCallback((postId: string) => {
-    setPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== postId) return post
-        const likedByMe = !post.likedByMe
-        return {
-          ...post,
-          likedByMe,
-          likes: likedByMe ? post.likes + 1 : Math.max(0, post.likes - 1),
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setAuthReady(true)
+      return
+    }
+
+    const supabase = requireSupabase()
+    let mounted = true
+
+    const init = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (!mounted) return
+        if (data.session?.user) {
+          await bootstrapSession(data.session.user.id)
         }
-      }),
-    )
+      } catch (error) {
+        console.error(error)
+      } finally {
+        if (mounted) setAuthReady(true)
+      }
+    }
+
+    void init()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        setCurrentUser(null)
+        setPosts([])
+        setStories([])
+        setConversations([])
+        setFollowingIds([])
+        return
+      }
+      void bootstrapSession(session.user.id)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [bootstrapSession])
+
+  useEffect(() => {
+    if (!currentUser) return
+    void refreshFeed()
+    void refreshChats()
+  }, [currentUser, refreshFeed, refreshChats])
+
+  useEffect(() => {
+    if (!currentUser || !isSupabaseConfigured) return
+    return api.subscribeToFeed(() => {
+      void refreshFeed()
+    })
+  }, [currentUser, refreshFeed])
+
+  useEffect(() => {
+    if (!activeConversationId || !isSupabaseConfigured) return
+
+    return api.subscribeToMessages(activeConversationId, (message: Message) => {
+      setConversations((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== activeConversationId) return chat
+          if (chat.messages.some((item) => item.id === message.id)) return chat
+          return {
+            ...chat,
+            messages: [...chat.messages, message],
+            lastMessage: message.text,
+            updatedAt: message.createdAt,
+          }
+        }),
+      )
+    })
+  }, [activeConversationId])
+
+  useEffect(() => {
+    saveStreakToStorage(streak)
+  }, [streak])
+
+  const signUp = useCallback(async (input: api.SignUpInput) => {
+    const profile = await api.signUp(input)
+    setCurrentUser(profile)
   }, [])
+
+  const signIn = useCallback(async (input: api.SignInInput) => {
+    const profile = await api.signIn(input)
+    setCurrentUser(profile)
+  }, [])
+
+  const logout = useCallback(async () => {
+    await api.signOut()
+    setCurrentUser(null)
+  }, [])
+
+  const updateProfile = useCallback(
+    async (updates: {
+      name: string
+      breed: string
+      age: number
+      bio: string
+      avatarFile?: File | null
+    }) => {
+      if (!currentUser) return
+      const next = await api.updateMyProfile(currentUser.id, updates)
+      setCurrentUser(next)
+    },
+    [currentUser],
+  )
+
+  const createPost = useCallback(
+    async (file: File, caption: string) => {
+      if (!currentUser) return
+      const post = await api.createPost({
+        userId: currentUser.id,
+        file,
+        caption,
+      })
+      setPosts((prev) => [post, ...prev])
+    },
+    [currentUser],
+  )
+
+  const toggleLike = useCallback(
+    async (postId: string) => {
+      if (!currentUser) return
+      const target = posts.find((post) => post.id === postId)
+      if (!target) return
+
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                likedByMe: !post.likedByMe,
+                likes: post.likedByMe
+                  ? Math.max(0, post.likes - 1)
+                  : post.likes + 1,
+              }
+            : post,
+        ),
+      )
+
+      try {
+        await api.toggleLike(postId, currentUser.id, target.likedByMe)
+      } catch (error) {
+        setPosts((prev) =>
+          prev.map((post) => (post.id === postId ? target : post)),
+        )
+        throw error
+      }
+    },
+    [currentUser, posts],
+  )
 
   const addComment = useCallback(
-    (postId: string, text: string) => {
+    async (postId: string, text: string) => {
       if (!currentUser || !text.trim()) return
-
-      const comment = {
-        id: `c-${Date.now()}`,
-        authorId: currentUser.id,
-        authorName: currentUser.name,
-        authorAvatar: currentUser.avatar,
-        text: text.trim(),
-        createdAt: new Date().toISOString(),
-      }
-
+      const comment = await api.addComment(postId, currentUser.id, text)
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -189,82 +301,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [currentUser],
   )
 
-  const toggleFollow = useCallback((catId: string) => {
-    setFollowingIds((prev) => {
-      const next = prev.includes(catId)
-        ? prev.filter((id) => id !== catId)
-        : [...prev, catId]
-      localStorage.setItem(FOLLOWING_STORAGE_KEY, JSON.stringify(next))
-      return next
-    })
-  }, [])
+  const toggleFollow = useCallback(
+    async (catId: string) => {
+      if (!currentUser) return
+      const isFollowing = await api.toggleFollow(currentUser.id, catId)
+      setFollowingIds((prev) =>
+        isFollowing
+          ? [...prev, catId]
+          : prev.filter((id) => id !== catId),
+      )
+    },
+    [currentUser],
+  )
 
-  const loadChats = useCallback(async () => {
-    setChatsLoading(true)
-    try {
-      const data = await fetchConversations()
-      setConversations(data)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setChatsLoading(false)
-    }
-  }, [])
+  const startChatWith = useCallback(
+    async (friendId: string) => {
+      if (!currentUser) throw new Error('Not signed in')
+      const conversationId = await api.getOrCreateConversation(
+        currentUser.id,
+        friendId,
+      )
+      await refreshChats()
+      setActiveConversationId(conversationId)
+      return conversationId
+    },
+    [currentUser, refreshChats],
+  )
 
   const sendMessage = useCallback(
-    (conversationId: string, text: string) => {
+    async (conversationId: string, text: string) => {
       if (!currentUser || !text.trim()) return
-
-      const message: Message = {
-        id: `m-${Date.now()}`,
-        senderId: currentUser.id,
-        text: text.trim(),
-        createdAt: new Date().toISOString(),
-      }
+      const message = await api.sendMessage(conversationId, currentUser.id, text)
 
       setConversations((prev) =>
-        prev.map((chat) =>
-          chat.id === conversationId
-            ? {
-                ...chat,
-                messages: [...chat.messages, message],
-                lastMessage: message.text,
-                updatedAt: message.createdAt,
-                unread: 0,
-              }
-            : chat,
-        ),
+        prev.map((chat) => {
+          if (chat.id !== conversationId) return chat
+          if (chat.messages.some((item) => item.id === message.id)) {
+            return {
+              ...chat,
+              lastMessage: message.text,
+              updatedAt: message.createdAt,
+            }
+          }
+          return {
+            ...chat,
+            messages: [...chat.messages, message],
+            lastMessage: message.text,
+            updatedAt: message.createdAt,
+          }
+        }),
       )
     },
     [currentUser],
   )
 
   const feedCat = useCallback(() => {
-    setStreak((prev) => {
-      const next = markFedToday(prev)
-      saveStreakToStorage(next)
-      return next
-    })
+    setStreak((prev) => markFedToday(prev))
   }, [])
-
-  useEffect(() => {
-    if (currentUser) {
-      void refreshFeed()
-      void loadChats()
-    }
-  }, [currentUser, refreshFeed, loadChats])
-
-  useEffect(() => {
-    saveStreakToStorage(streak)
-  }, [streak])
 
   const value = useMemo<AppContextValue>(
     () => ({
+      isConfigured: isSupabaseConfigured,
+      authReady,
       language,
       setLanguage,
       isAuthenticated: Boolean(currentUser),
       currentUser,
-      login,
+      signUp,
+      signIn,
       logout,
       updateProfile,
       posts,
@@ -272,23 +376,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       feedLoading,
       feedError,
       refreshFeed,
+      createPost,
       toggleLike,
       addComment,
       followingIds,
       toggleFollow,
+      startChatWith,
       conversations,
       activeConversationId,
       setActiveConversationId,
       sendMessage,
       chatsLoading,
+      refreshChats,
       streak,
       feedCat,
     }),
     [
+      authReady,
       language,
       setLanguage,
       currentUser,
-      login,
+      signUp,
+      signIn,
       logout,
       updateProfile,
       posts,
@@ -296,14 +405,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       feedLoading,
       feedError,
       refreshFeed,
+      createPost,
       toggleLike,
       addComment,
       followingIds,
       toggleFollow,
+      startChatWith,
       conversations,
       activeConversationId,
       sendMessage,
       chatsLoading,
+      refreshChats,
       streak,
       feedCat,
     ],

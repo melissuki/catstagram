@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { CatProfile, Post } from '@/types'
+import type { Post } from '@/types'
 import { fetchUserPosts } from '@/services/api'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { Avatar } from '@/components/common/Avatar'
+import { ImageUpload } from '@/components/common/ImageUpload'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 
 export function ProfilePage() {
@@ -13,16 +14,23 @@ export function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [loadingPosts, setLoadingPosts] = useState(true)
-  const [form, setForm] = useState<Partial<CatProfile>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [form, setForm] = useState({
+    name: '',
+    breed: '',
+    age: '1',
+    bio: '',
+  })
 
   useEffect(() => {
     if (!currentUser) return
     setForm({
       name: currentUser.name,
       breed: currentUser.breed,
-      age: currentUser.age,
+      age: String(currentUser.age),
       bio: currentUser.bio,
-      avatar: currentUser.avatar,
     })
   }, [currentUser])
 
@@ -33,10 +41,10 @@ export function ProfilePage() {
     const load = async () => {
       setLoadingPosts(true)
       try {
-        const data = await fetchUserPosts(currentUser.id)
+        const data = await fetchUserPosts(currentUser.id, currentUser.id)
         if (!cancelled) setPosts(data)
-      } catch (error) {
-        console.error(error)
+      } catch (err) {
+        console.error(err)
       } finally {
         if (!cancelled) setLoadingPosts(false)
       }
@@ -50,18 +58,28 @@ export function ProfilePage() {
 
   if (!currentUser) return null
 
-  const handleSave = (event: FormEvent) => {
+  const handleSave = async (event: FormEvent) => {
     event.preventDefault()
-    updateProfile({
-      name: form.name?.trim() || currentUser.name,
-      breed: form.breed?.trim() || currentUser.breed,
-      age: Number(form.age) || currentUser.age,
-      bio: form.bio?.trim() || currentUser.bio,
-      avatar: form.avatar?.trim() || currentUser.avatar,
-    })
-    setEditing(false)
-    setSaved(true)
-    window.setTimeout(() => setSaved(false), 2000)
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      await updateProfile({
+        name: form.name.trim() || currentUser.name,
+        breed: form.breed.trim() || currentUser.breed,
+        age: Number(form.age) || currentUser.age,
+        bio: form.bio.trim(),
+        avatarFile,
+      })
+      setAvatarFile(null)
+      setEditing(false)
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -69,7 +87,7 @@ export function ProfilePage() {
       <section className="animate-fade-up rounded-[1.75rem] border border-cream-deep bg-surface/90 p-5 sm:p-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <Avatar
-            src={currentUser.avatar}
+            src={currentUser.avatar || 'https://placehold.co/200x200/ffd6c0/5c5a66?text=Cat'}
             alt={currentUser.name}
             size="xl"
             ring
@@ -86,7 +104,10 @@ export function ProfilePage() {
             </p>
 
             <div className="mt-4 flex justify-center gap-6 sm:justify-start">
-              <Stat label={t.profile.posts} value={posts.length || currentUser.postsCount} />
+              <Stat
+                label={t.profile.posts}
+                value={posts.length || currentUser.postsCount}
+              />
               <Stat label={t.profile.followers} value={currentUser.followers} />
               <Stat label={t.profile.following} value={followingIds.length} />
             </div>
@@ -107,36 +128,42 @@ export function ProfilePage() {
         </div>
 
         {editing ? (
-          <form onSubmit={handleSave} className="mt-6 grid gap-3 sm:grid-cols-2">
+          <form
+            onSubmit={(event) => void handleSave(event)}
+            className="mt-6 grid gap-3 sm:grid-cols-2"
+          >
             <Field
               label={t.profile.name}
-              value={form.name ?? ''}
+              value={form.name}
               onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
             />
             <Field
               label={t.profile.breed}
-              value={form.breed ?? ''}
+              value={form.breed}
               onChange={(value) => setForm((prev) => ({ ...prev, breed: value }))}
             />
             <Field
               label={t.profile.age}
               type="number"
-              value={String(form.age ?? '')}
-              onChange={(value) =>
-                setForm((prev) => ({ ...prev, age: Number(value) }))
-              }
+              value={form.age}
+              onChange={(value) => setForm((prev) => ({ ...prev, age: value }))}
             />
-            <Field
-              label={t.profile.avatar}
-              value={form.avatar ?? ''}
-              onChange={(value) => setForm((prev) => ({ ...prev, avatar: value }))}
-            />
+            <div className="sm:col-span-2">
+              <ImageUpload
+                label={t.profile.avatar}
+                value={avatarFile}
+                onChange={setAvatarFile}
+                previewUrl={currentUser.avatar || null}
+                helperText={t.feed.photoHint}
+                compact
+              />
+            </div>
             <label className="sm:col-span-2">
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-muted">
                 {t.profile.bio}
               </span>
               <textarea
-                value={form.bio ?? ''}
+                value={form.bio}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, bio: event.target.value }))
                 }
@@ -144,11 +171,15 @@ export function ProfilePage() {
                 className="w-full rounded-2xl border border-cream-deep bg-cream-soft/70 px-3 py-2.5 text-sm outline-none focus:border-peach-soft"
               />
             </label>
+            {error ? (
+              <p className="sm:col-span-2 text-sm text-streak">{error}</p>
+            ) : null}
             <button
               type="submit"
-              className="sm:col-span-2 rounded-2xl bg-peach px-4 py-3 text-sm font-bold text-white transition hover:bg-coral"
+              disabled={submitting}
+              className="sm:col-span-2 rounded-2xl bg-peach px-4 py-3 text-sm font-bold text-white transition hover:bg-coral disabled:opacity-60"
             >
-              {t.profile.save}
+              {submitting ? t.common.loading : t.profile.save}
             </button>
           </form>
         ) : null}
@@ -160,6 +191,8 @@ export function ProfilePage() {
         </h3>
         {loadingPosts ? (
           <LoadingSpinner label={t.common.loading} />
+        ) : posts.length === 0 ? (
+          <p className="text-sm text-slate-muted">{t.feed.noPosts}</p>
         ) : (
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {posts.map((post) => (

@@ -33,8 +33,9 @@ export function ChatWindow() {
 
   const handleSend = (event: FormEvent) => {
     event.preventDefault()
-    sendMessage(conversation.id, draft)
+    const text = draft
     setDraft('')
+    void sendMessage(conversation.id, text)
   }
 
   return (

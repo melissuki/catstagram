@@ -3,11 +3,13 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { StoriesBar } from '@/components/feed/StoriesBar'
 import { FeedCard } from '@/components/feed/FeedCard'
 import { SuggestedFriends } from '@/components/feed/SuggestedFriends'
+import { CreatePost } from '@/components/feed/CreatePost'
 import { MamaStreakWidget } from '@/components/streak/MamaStreakWidget'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { SetupBanner } from '@/components/common/SetupBanner'
 
 export function HomePage() {
-  const { posts, feedLoading, feedError, refreshFeed } = useApp()
+  const { posts, feedLoading, feedError, refreshFeed, isConfigured } = useApp()
   const { t } = useTranslation()
 
   return (
@@ -22,6 +24,9 @@ export function HomePage() {
           </p>
         </header>
 
+        {!isConfigured ? <SetupBanner /> : null}
+
+        <CreatePost />
         <StoriesBar />
 
         <div className="lg:hidden">
@@ -32,7 +37,7 @@ export function HomePage() {
 
         {feedError ? (
           <div className="rounded-[1.5rem] border border-coral/30 bg-peach-light/50 px-4 py-6 text-center">
-            <p className="text-sm text-slate">{t.feed.error}</p>
+            <p className="text-sm text-slate">{feedError || t.feed.error}</p>
             <button
               type="button"
               onClick={() => void refreshFeed()}

@@ -1,3 +1,6 @@
+const FALLBACK =
+  'https://placehold.co/200x200/ffd6c0/5c5a66?text=Cat'
+
 interface AvatarProps {
   src: string
   alt: string
@@ -22,7 +25,7 @@ export function Avatar({
 }: AvatarProps) {
   const image = (
     <img
-      src={src}
+      src={src || FALLBACK}
       alt={alt}
       className={`${sizeMap[size]} rounded-full object-cover bg-peach-light ${className}`}
     />

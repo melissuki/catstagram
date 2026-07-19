@@ -1,78 +1,154 @@
 # Catstagram
 
-A soft, Instagram-inspired social web app for cats and their humans — built with **Vite + React + TypeScript**, **Tailwind CSS**, **Axios**, and the **Context API**.
+A soft, Instagram-inspired social app for cats — now backed by **Supabase** for real multi-user auth, global feed, photo uploads, and live chat.
 
-Designed as a production-ready foundation that can later grow into a mobile app (shared domain logic, clean folder boundaries, typed models).
+Stack: **Vite + React + TypeScript**, **Tailwind CSS**, **Supabase** (Auth, Postgres, Storage, Realtime), Context API.
 
-## Features
+---
 
-- Mock authentication & editable cat profiles
-- Home feed with stories, likes, comments, tags, and follow actions
-- Direct messages with split-pane chat UI
-- Mama Streak dashboard (daily feed check-in persisted in `localStorage`)
-- Bilingual UI (English / Turkish) without external i18n packages
-- Responsive layout: sidebar on desktop, bottom tabs on mobile
-
-## Tech stack
-
-| Layer | Choice |
-| --- | --- |
-| Framework | Vite + React 19 + TypeScript |
-| Styling | Tailwind CSS v4 |
-| Routing | react-router-dom |
-| State | Context API (`AppProvider`) |
-| Data | Axios + local mock datasets |
-| Icons | lucide-react |
-| Deploy | Vercel (`vercel.json` SPA rewrite) |
-
-## Getting started
+## Quick start (local)
 
 ```bash
 npm install
+cp .env.example .env
+# fill VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
-
-Build for production:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Project structure
+---
 
+## Step-by-step: go from mockup → live multi-user
+
+### 1) Create a Supabase project
+
+1. Go to [https://supabase.com](https://supabase.com) → **New project**
+2. Wait until the database is ready
+3. Open **Project Settings → API**
+4. Copy:
+   - **Project URL** → `VITE_SUPABASE_URL`
+   - **anon public** key → `VITE_SUPABASE_ANON_KEY`
+
+### 2) Add environment variables
+
+**Local** — create `.env` in the project root:
+
+```env
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
-src/
-  assets/           # static assets
-  components/       # reusable UI (layout, feed, chat, streak, common)
-  context/          # global AppProvider (auth, feed, chats, streak, i18n)
-  hooks/            # shared hooks (useTranslation)
-  i18n/             # EN / TR translation objects
-  pages/            # route-level screens
-  services/         # Axios instance + mock API + seed data
-  types/            # shared TypeScript models
-  utils/            # helpers (Mama Streak persistence)
-  App.tsx           # providers + routes
-  main.tsx          # entry
-```
+
+**Vercel** — Project → Settings → Environment Variables → add the same two keys for Production / Preview, then redeploy.
+
+### 3) Run the database + storage schema
+
+1. In Supabase → **SQL Editor** → New query
+2. Paste the full contents of [`supabase/schema.sql`](./supabase/schema.sql)
+3. Click **Run**
+
+This creates:
+
+| Resource | Purpose |
+| --- | --- |
+| `profiles` | Cat profiles linked to `auth.users` |
+| `posts` / `likes` / `comments` | Global feed |
+| `follows` | Friendship / follow graph |
+| `conversations` / `conversation_members` / `messages` | DMs |
+| Storage buckets `avatars`, `posts` | Image uploads |
+| RLS policies | Secure per-user access |
+| Realtime publication | Live messages + feed updates |
+| `create_conversation_with()` | Safe 1:1 chat bootstrap under RLS |
+
+If a Realtime `alter publication` line errors because a table is already added, you can ignore that specific error.
+
+### 4) Auth settings (recommended for friends)
+
+Supabase → **Authentication → Providers → Email**:
+
+- Enable Email provider
+- For a private friends app, turn **off** “Confirm email” so signup works immediately  
+  (or keep it on and use the confirmation link)
+
+### 5) Invite friends
+
+1. Deploy / open the app
+2. Each friend **Signs up** with email + password + cat profile + optional photo
+3. They appear in **Suggested friends**
+4. Anyone can **Share a moment** → photo uploads to Storage → appears in everyone’s feed
+5. **Message** a friend → realtime chat via Supabase Realtime
+
+---
+
+## What changed architecturally
+
+### File uploads
+
+- `ImageUpload` uses `<input type="file" accept="image/*" />`
+- Instant preview via `URL.createObjectURL(file)`
+- Upload path: `Storage` bucket (`avatars` / `posts`) → public URL saved on profile/post rows
+
+### API / state
+
+- Mock `localStorage` auth + seed arrays removed (Mama Streak + language stay local)
+- `AppContext` syncs with Supabase session + Postgres
+- Service layer under `src/services/`:
+  - `auth.ts` — signup / login / logout
+  - `posts.ts` — global feed, create post, likes, comments
+  - `messages.ts` — conversations + Realtime listeners
+  - `profiles.ts` — profile CRUD + follows
+  - `storage.ts` — image uploads
+  - `api.ts` — facade re-exports
+
+### Realtime
+
+- Active chat subscribes to `messages` inserts for that conversation
+- Feed refreshes on `posts` / `likes` / `comments` changes
+
+---
 
 ## Routes
 
 | Path | Page |
 | --- | --- |
-| `/auth` | Mock profile login |
-| `/` | Home feed + Mama Streak widget |
-| `/profile` | Profile + edit form + post grid |
-| `/messages` | DM split pane |
-| `/dashboard` | Mama Streak management |
+| `/auth` | Sign up / Sign in |
+| `/` | Global feed + create post + Mama Streak |
+| `/profile` | Edit profile + photo + grid |
+| `/messages` | Live DM split pane |
+| `/dashboard` | Mama Streak (device-local) |
 
-## Deploy on Vercel
+---
 
-1. Push the repo to GitHub
-2. Import the project in Vercel
-3. Framework preset: **Vite** (build `npm run build`, output `dist`)
-4. `vercel.json` already rewrites all routes to `index.html` for client-side routing
+## Project structure
 
-## Mobile migration notes
+```
+src/
+  components/   # UI (ImageUpload, CreatePost, chat, feed, layout)
+  context/      # AppProvider synced to Supabase
+  services/     # Auth, posts, messages, profiles, storage
+  lib/          # supabase client
+  pages/
+  i18n/
+  types/
+supabase/
+  schema.sql    # run once in Supabase SQL Editor
+```
 
-Keep domain logic in `services/`, `context/`, `types/`, and `utils/` so a future React Native / Expo app can reuse the same models and state flows while swapping only the UI layer under `components/` and `pages/`.
+---
+
+## Deploy checklist (Vercel)
+
+1. Push repo to GitHub
+2. Import in Vercel (framework: Vite, output: `dist`)
+3. Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
+4. Confirm `vercel.json` SPA rewrite is present
+5. Redeploy after env changes
+
+---
+
+## Mobile migration note
+
+Keep domain logic in `services/`, `context/`, `types/`, and `lib/`. A future React Native / Expo app can reuse the same Supabase project and swap only the UI layer.

@@ -22,9 +22,10 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
 
   const handleComment = (event: FormEvent) => {
     event.preventDefault()
-    addComment(post.id, comment)
+    const text = comment
     setComment('')
     setShowComments(true)
+    void addComment(post.id, text)
   }
 
   return (
@@ -34,7 +35,15 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3">
-          <Avatar src={post.authorAvatar} alt={post.authorName} size="md" ring />
+          <Avatar
+            src={
+              post.authorAvatar ||
+              'https://placehold.co/100x100/ffd6c0/5c5a66?text=Cat'
+            }
+            alt={post.authorName}
+            size="md"
+            ring
+          />
           <div>
             <p className="text-sm font-bold text-slate">{post.authorName}</p>
             <p className="text-xs text-slate-muted">
@@ -46,7 +55,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
         {!isOwn ? (
           <button
             type="button"
-            onClick={() => toggleFollow(post.authorId)}
+            onClick={() => void toggleFollow(post.authorId)}
             className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
               isFollowing
                 ? 'bg-cream-deep text-slate-muted'
@@ -70,7 +79,7 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => toggleLike(post.id)}
+            onClick={() => void toggleLike(post.id)}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate transition hover:text-streak"
             aria-label={post.likedByMe ? t.feed.unlike : t.feed.like}
           >
