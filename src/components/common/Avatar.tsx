@@ -35,7 +35,7 @@ export function Avatar({
 
   return (
     <div className="story-ring rounded-full p-[2.5px] shadow-sm">
-      <div className="rounded-full bg-white p-[2px]">{image}</div>
+      <div className="rounded-full bg-white p-[2px] dark:bg-slate-900">{image}</div>
     </div>
   )
 }

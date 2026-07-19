@@ -23,24 +23,47 @@ export {
 
 export {
   fetchProfileById,
+  fetchProfileByUsername,
+  searchProfilesByUsername,
+  isUsernameAvailable,
   updateMyProfile,
+  updateGameHighScore,
   fetchSuggestedCats,
   fetchFollowingIds,
   toggleFollow,
 } from '@/services/profiles'
 
 export {
+  fetchNotifications,
+  fetchNotificationById,
+  markNotificationsRead,
+  createNotification,
+  subscribeToNotifications,
+  fetchActorUsername,
+} from '@/services/notifications'
+
+export {
   fetchFeed,
   fetchUserPosts,
-  fetchStories,
   createPost,
   toggleLike,
   addComment,
 } from '@/services/posts'
 
 export {
+  fetchStories,
+  createStory,
+  markStoriesViewed,
+  groupStoriesIntoRings,
+} from '@/services/stories'
+
+export { uploadStoryImage } from '@/services/storage'
+
+export {
   fetchConversations,
+  fetchThread,
   getOrCreateConversation,
+  ensureConversation,
   sendMessage,
   subscribeToMessages,
   subscribeToAllMessages,

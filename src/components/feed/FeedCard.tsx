@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, Send } from 'lucide-react'
 import type { Post } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { Avatar } from '@/components/common/Avatar'
+import { profilePath } from '@/utils/username'
 
 interface FeedCardProps {
   post: Post
@@ -34,7 +36,10 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-3">
+        <Link
+          to={isOwn ? '/profile' : profilePath(post.authorId)}
+          className="flex items-center gap-3"
+        >
           <Avatar
             src={
               post.authorAvatar ||
@@ -45,12 +50,21 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
             ring
           />
           <div>
-            <p className="text-sm font-bold text-slate-700">{post.authorName}</p>
-            <p className="text-xs text-slate-500">
-              {new Date(post.createdAt).toLocaleDateString()}
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-100">
+                {post.authorName}
+              </p>
+              {isFollowing ? (
+                <span className="rounded-md bg-gradient-to-r from-purple-100 via-pink-100 to-orange-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-purple-600 dark:from-purple-950/60 dark:via-pink-950/40 dark:to-orange-950/30 dark:text-pink-300">
+                  {t.feed.followingBadge}
+                </span>
+              ) : null}
+            </div>
+            <p className="text-xs font-semibold text-pink-500">
+              @{post.authorUsername}
             </p>
           </div>
-        </div>
+        </Link>
 
         {!isOwn ? (
           <button
@@ -58,16 +72,22 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
             onClick={() => void toggleFollow(post.authorId)}
             className={
               isFollowing
-                ? 'rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500'
+                ? 'rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300'
                 : 'btn-primary-sm'
             }
           >
-            {isFollowing ? t.feed.following : t.feed.follow}
+            {isFollowing ? t.feed.unfollow : t.feed.follow}
           </button>
         ) : null}
       </header>
 
-      <div className="aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-pink-50/40">
+      <div
+        className={`aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-pink-50/40 dark:from-slate-900 dark:to-purple-950/30 ${
+          isFollowing
+            ? 'ring-2 ring-inset ring-pink-300/50 dark:ring-purple-400/30'
+            : ''
+        }`}
+      >
         <img
           src={post.image}
           alt={post.caption}
@@ -131,8 +151,19 @@ export function FeedCard({ post, index = 0 }: FeedCardProps) {
                 <div key={item.id} className="flex gap-2 text-sm">
                   <Avatar src={item.authorAvatar} alt={item.authorName} size="sm" />
                   <p>
-                    <span className="font-bold text-slate-700">{item.authorName}</span>{' '}
-                    <span className="text-slate-500">{item.text}</span>
+                    <Link
+                      to={
+                        item.authorId === currentUser?.id
+                          ? '/profile'
+                          : profilePath(item.authorId)
+                      }
+                      className="font-bold text-slate-700 dark:text-slate-100"
+                    >
+                      @{item.authorUsername}
+                    </Link>{' '}
+                    <span className="text-slate-500 dark:text-slate-300">
+                      {item.text}
+                    </span>
                   </p>
                 </div>
               ))

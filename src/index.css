@@ -1,25 +1,21 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-brand: 'Comfortaa', system-ui, sans-serif;
   --font-sans: 'Nunito', system-ui, sans-serif;
 
-  /* Soft sunset surfaces */
   --color-cream: #fffaf8;
   --color-cream-soft: #faf5ff;
   --color-cream-deep: #f3e8ff;
-
-  /* Sunset accents (legacy peach-* aliases → purple/pink/orange) */
   --color-peach: #c084fc;
   --color-peach-soft: #fbcfe8;
   --color-peach-light: #fff1f2;
   --color-coral: #fb923c;
-
-  /* Calm charcoal / slate text */
   --color-slate: #334155;
   --color-slate-muted: #64748b;
   --color-slate-soft: #94a3b8;
-
   --color-surface: #ffffff;
   --color-streak: #f472b6;
   --color-success: #a78bfa;
@@ -31,7 +27,7 @@
   }
 
   body {
-    @apply m-0 min-h-dvh font-sans text-slate-700;
+    @apply m-0 min-h-dvh font-sans text-slate-700 transition-colors duration-300;
     background-color: #fffaf8;
     background-image:
       linear-gradient(
@@ -44,6 +40,21 @@
       radial-gradient(ellipse 55% 40% at 100% 8%, rgb(251 207 232 / 0.3), transparent 50%),
       radial-gradient(ellipse 60% 35% at 50% 100%, rgb(254 215 170 / 0.28), transparent 55%);
     background-attachment: fixed;
+  }
+
+  .dark body,
+  html.dark body {
+    @apply text-slate-100;
+    background-color: #020617;
+    background-image:
+      linear-gradient(
+        to bottom right,
+        #020617 0%,
+        rgb(59 7 100 / 0.45) 45%,
+        #0f172a 100%
+      ),
+      radial-gradient(ellipse 60% 40% at 10% 0%, rgb(168 85 247 / 0.18), transparent 55%),
+      radial-gradient(ellipse 50% 35% at 90% 10%, rgb(236 72 153 / 0.12), transparent 50%);
   }
 
   #root {
@@ -62,17 +73,17 @@
     font-family: var(--font-brand);
   }
 
-  /* Soft floating card — pure white on sunset gradient */
   .card-panel {
     @apply rounded-2xl border border-purple-100/40 bg-white shadow-sm backdrop-blur-md;
+    @apply dark:border-purple-500/20 dark:bg-slate-900/90 dark:shadow-[0_8px_30px_-12px_rgba(168,85,247,0.25)];
   }
 
-  /* Primary CTA — purple → pink → orange */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 px-4 py-3 text-sm font-bold text-white shadow-sm transition duration-300;
     @apply hover:from-purple-500 hover:via-pink-500 hover:to-orange-500 hover:shadow-md hover:brightness-[1.03];
     @apply active:scale-[0.98];
-    @apply disabled:cursor-not-allowed disabled:from-slate-200 disabled:via-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:brightness-100;
+    @apply disabled:cursor-not-allowed disabled:from-slate-200 disabled:via-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none;
+    @apply dark:disabled:from-slate-700 dark:disabled:via-slate-700 dark:disabled:to-slate-700 dark:disabled:text-slate-500;
   }
 
   .btn-primary-sm {
@@ -84,6 +95,8 @@
   .btn-soft {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 px-3 py-2 text-sm font-semibold text-slate-600 transition duration-300;
     @apply hover:from-purple-100/80 hover:via-pink-100/80 hover:to-orange-100/80 hover:text-slate-700;
+    @apply dark:from-purple-950/50 dark:via-pink-950/40 dark:to-orange-950/30 dark:text-slate-200;
+    @apply dark:hover:from-purple-900/50 dark:hover:via-pink-900/40 dark:hover:to-orange-900/30 dark:hover:text-white;
   }
 
   .nav-active {
@@ -92,6 +105,11 @@
 
   .story-ring {
     background: linear-gradient(135deg, #c084fc 0%, #f472b6 50%, #fb923c 100%);
+  }
+
+  .input-field {
+    @apply w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-pink-300;
+    @apply dark:border-purple-500/20 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-pink-400/50;
   }
 }
 

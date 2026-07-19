@@ -1,12 +1,14 @@
 import { AuthError } from '@supabase/supabase-js'
 import { requireSupabase } from '@/services/supabaseClient'
-import { fetchProfileById } from '@/services/profiles'
+import { fetchProfileById, isUsernameAvailable } from '@/services/profiles'
 import { getAppUrl } from '@/utils/appUrl'
+import { isValidUsername, normalizeUsername } from '@/utils/username'
 import type { CatProfile } from '@/types'
 
 export interface SignUpInput {
   email: string
   password: string
+  username: string
   name: string
   breed: string
   age: number
@@ -57,14 +59,29 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
   const supabase = requireSupabase()
   const appUrl = getAppUrl()
   const email = input.email.trim()
+  const username = normalizeUsername(input.username)
+
+  if (!isValidUsername(username)) {
+    throw new Error(
+      'Username must be 3–24 characters: lowercase letters, numbers, underscore only (no spaces).',
+    )
+  }
 
   try {
+    const available = await isUsernameAvailable(username)
+    if (!available) {
+      const err = new Error('USERNAME_TAKEN')
+      err.name = 'UsernameTakenError'
+      throw err
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password: input.password,
       options: {
         emailRedirectTo: `${appUrl}/auth`,
         data: {
+          username,
           name: input.name.trim() || 'Cat',
           breed: input.breed.trim() || 'Mixed',
           age: input.age,

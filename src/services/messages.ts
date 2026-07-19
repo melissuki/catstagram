@@ -1,87 +1,80 @@
 import { requireSupabase } from '@/services/supabaseClient'
 import { mapConversation, mapMessage, mapProfile } from '@/services/mappers'
+import { createNotification } from '@/services/notifications'
+import { fetchProfileById } from '@/services/profiles'
 import type { Conversation, Message } from '@/types'
 import type { DbMessage, DbProfile } from '@/types/database'
 
+function peerIdFor(row: DbMessage, currentUserId: string): string {
+  return row.sender_id === currentUserId ? row.receiver_id : row.sender_id
+}
+
+async function fetchProfilesByIds(
+  ids: string[],
+): Promise<Map<string, DbProfile>> {
+  const map = new Map<string, DbProfile>()
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (!unique.length) return map
+
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('id', unique)
+
+  if (error) {
+    console.error('[messages] peer profiles fetch failed', error)
+    throw new Error(error.message)
+  }
+
+  for (const row of (data ?? []) as DbProfile[]) {
+    map.set(row.id, row)
+  }
+  return map
+}
+
+/**
+ * Conversation list via two-step fetch (no profile joins):
+ * 1) all messages involving the current user
+ * 2) partner profiles by id
+ */
 export async function fetchConversations(
   currentUserId: string,
 ): Promise<Conversation[]> {
   const supabase = requireSupabase()
 
-  const { data: memberships, error: memberError } = await supabase
-    .from('conversation_members')
-    .select('conversation_id')
-    .eq('user_id', currentUserId)
-
-  if (memberError) throw new Error(memberError.message)
-
-  const conversationIds = (memberships ?? []).map(
-    (row) => row.conversation_id as string,
-  )
-
-  if (conversationIds.length === 0) return []
-
-  const { data: memberRows, error: peersError } = await supabase
-    .from('conversation_members')
-    .select('conversation_id, user_id')
-    .in('conversation_id', conversationIds)
-
-  if (peersError) throw new Error(peersError.message)
-
-  const peerIds = [
-    ...new Set(
-      (memberRows ?? [])
-        .filter((row) => row.user_id !== currentUserId)
-        .map((row) => row.user_id as string),
-    ),
-  ]
-
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('*')
-    .in('id', peerIds.length ? peerIds : ['00000000-0000-0000-0000-000000000000'])
-
-  if (profilesError) throw new Error(profilesError.message)
-
-  const profileMap = new Map(
-    ((profiles ?? []) as DbProfile[]).map((profile) => [
-      profile.id,
-      mapProfile(profile),
-    ]),
-  )
-
-  const { data: messages, error: messagesError } = await supabase
+  const { data: allMsgs, error } = await supabase
     .from('messages')
     .select('*')
-    .in('conversation_id', conversationIds)
+    .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
     .order('created_at', { ascending: true })
 
-  if (messagesError) throw new Error(messagesError.message)
-
-  const messagesByConversation = new Map<string, Message[]>()
-  for (const row of (messages ?? []) as DbMessage[]) {
-    const list = messagesByConversation.get(row.conversation_id) ?? []
-    list.push(mapMessage(row))
-    messagesByConversation.set(row.conversation_id, list)
+  if (error) {
+    console.error('[messages] fetch conversations failed', error)
+    throw new Error(error.message)
   }
 
+  const rows = (allMsgs ?? []) as DbMessage[]
+  const byPeer = new Map<string, Message[]>()
+
+  for (const row of rows) {
+    const peer = peerIdFor(row, currentUserId)
+    if (!peer || peer === currentUserId) continue
+    const list = byPeer.get(peer) ?? []
+    list.push(mapMessage(row))
+    byPeer.set(peer, list)
+  }
+
+  const peerProfiles = await fetchProfilesByIds([...byPeer.keys()])
+
   const conversations: Conversation[] = []
-
-  for (const conversationId of conversationIds) {
-    const peerId = (memberRows ?? []).find(
-      (row) =>
-        row.conversation_id === conversationId && row.user_id !== currentUserId,
-    )?.user_id as string | undefined
-
-    if (!peerId) continue
-    const participant = profileMap.get(peerId)
-    if (!participant) continue
-
+  for (const [peer, messages] of byPeer) {
+    const profile = peerProfiles.get(peer)
+    if (!profile) continue
     conversations.push(
       mapConversation({
-        id: conversationId,
-        participant,
-        messages: messagesByConversation.get(conversationId) ?? [],
+        participant: mapProfile(profile),
+        messages,
       }),
     )
   }
@@ -91,74 +84,90 @@ export async function fetchConversations(
   )
 }
 
+/** Full chronological thread between two users (plain select, no joins). */
+export async function fetchThread(
+  currentUserId: string,
+  targetUserId: string,
+): Promise<Message[]> {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .or(
+      `and(sender_id.eq.${currentUserId},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${currentUserId})`,
+    )
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[messages] fetch thread failed', error)
+    throw new Error(error.message)
+  }
+  return ((data ?? []) as DbMessage[]).map(mapMessage)
+}
+
+/** Open (or create empty) chat with a peer — thread id is the peer's user id. */
 export async function getOrCreateConversation(
-  _currentUserId: string,
+  currentUserId: string,
   friendId: string,
 ): Promise<string> {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc('create_conversation_with', {
-    friend_id: friendId,
-  })
+  if (!friendId) throw new Error('Missing friend id')
+  if (friendId === currentUserId) throw new Error('Cannot chat with yourself')
+  await fetchProfileById(friendId)
+  return friendId
+}
 
-  if (error) throw new Error(error.message)
-  return data as string
+/** Return inbox list entry for a peer, creating an empty shell if none yet. */
+export async function ensureConversation(
+  currentUserId: string,
+  friendId: string,
+): Promise<Conversation> {
+  const profile = await fetchProfileById(friendId)
+  const thread = await fetchThread(currentUserId, friendId)
+  return mapConversation({ participant: profile, messages: thread })
 }
 
 export async function sendMessage(
-  conversationId: string,
+  receiverId: string,
   senderId: string,
   text: string,
 ): Promise<Message> {
   const supabase = requireSupabase()
+  const content = text.trim()
+  if (!content) throw new Error('Message is empty')
+  if (receiverId === senderId) throw new Error('Cannot message yourself')
+
   const { data, error } = await supabase
     .from('messages')
     .insert({
-      conversation_id: conversationId,
       sender_id: senderId,
-      body: text.trim(),
+      receiver_id: receiverId,
+      content,
     })
     .select('*')
     .single()
 
   if (error) throw new Error(error.message)
-  return mapMessage(data as DbMessage)
+
+  const message = mapMessage(data as DbMessage)
+
+  await createNotification({
+    userId: receiverId,
+    actorId: senderId,
+    type: 'message',
+  })
+
+  return message
 }
 
 export function subscribeToMessages(
-  conversationId: string,
+  peerId: string,
+  currentUserId: string,
   onMessage: (message: Message) => void,
 ) {
   const supabase = requireSupabase()
 
   const channel = supabase
-    .channel(`messages:${conversationId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload) => {
-        onMessage(mapMessage(payload.new as DbMessage))
-      },
-    )
-    .subscribe()
-
-  return () => {
-    void supabase.removeChannel(channel)
-  }
-}
-
-/** Listens for any new message so conversation previews stay live. */
-export function subscribeToAllMessages(
-  onMessage: (message: Message & { conversationId: string }) => void,
-) {
-  const supabase = requireSupabase()
-
-  const channel = supabase
-    .channel('messages-global')
+    .channel(`dm-thread:${currentUserId}:${peerId}`)
     .on(
       'postgres_changes',
       {
@@ -168,10 +177,40 @@ export function subscribeToAllMessages(
       },
       (payload) => {
         const row = payload.new as DbMessage
-        onMessage({
-          ...mapMessage(row),
-          conversationId: row.conversation_id,
-        })
+        const involvesPair =
+          (row.sender_id === currentUserId && row.receiver_id === peerId) ||
+          (row.sender_id === peerId && row.receiver_id === currentUserId)
+        if (involvesPair) onMessage(mapMessage(row))
+      },
+    )
+    .subscribe()
+
+  return () => {
+    void supabase.removeChannel(channel)
+  }
+}
+
+/** Global DM listener for inbox previews + toasts. */
+export function subscribeToAllMessages(
+  currentUserId: string,
+  onMessage: (message: Message) => void,
+) {
+  const supabase = requireSupabase()
+
+  const channel = supabase
+    .channel(`dm-global:${currentUserId}:${crypto.randomUUID()}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      },
+      (payload) => {
+        const row = payload.new as DbMessage
+        if (row.sender_id === currentUserId || row.receiver_id === currentUserId) {
+          onMessage(mapMessage(row))
+        }
       },
     )
     .subscribe()

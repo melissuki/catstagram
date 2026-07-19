@@ -57,11 +57,12 @@ This creates:
 | `profiles` | Cat profiles linked to `auth.users` |
 | `posts` / `likes` / `comments` | Global feed |
 | `follows` | Friendship / follow graph |
-| `conversations` / `conversation_members` / `messages` | DMs |
+| `messages` (`sender_id`, `receiver_id`, `content`) | Direct messages |
 | Storage bucket `cat-photos` | Profile + post image uploads |
 | RLS policies | Secure per-user access |
 | Realtime publication | Live messages + feed updates |
-| `create_conversation_with()` | Safe 1:1 chat bootstrap under RLS |
+
+If you already had the older conversation-based DMs schema, also run [`supabase/migrations/refactor_messages_dm.sql`](./supabase/migrations/refactor_messages_dm.sql) in the SQL Editor.
 
 If a Realtime `alter publication` line errors because a table is already added, you can ignore that specific error.
 
@@ -92,10 +93,38 @@ VITE_APP_URL=https://YOUR-APP.vercel.app
 ### 5) Invite friends
 
 1. Deploy / open the app
-2. Each friend **Signs up** with email + password + cat profile + optional photo
-3. They appear in **Suggested friends**
-4. Anyone can **Share a moment** → photo uploads to Storage → appears in everyone’s feed
+2. Each friend **Signs up** with email + password + **unique username** + cat profile
+3. Use **Search** to find cats by `@username`, then **Follow** them
+4. Home feed shows posts from accounts you follow (plus your own)
 5. **Message** a friend → realtime chat via Supabase Realtime
+
+### Existing projects: migrations
+
+If you already ran an older schema, run these in the Supabase SQL Editor as needed:
+
+- [`supabase/migrations/add_username.sql`](./supabase/migrations/add_username.sql) — unique `@username` handles
+- [`supabase/migrations/add_stories.sql`](./supabase/migrations/add_stories.sql) — Instagram-like stories table + RLS
+- [`supabase/migrations/add_food_streak.sql`](./supabase/migrations/add_food_streak.sql) — legacy (optional; replaced by Treat Catcher)
+- [`supabase/migrations/add_game_and_notifications.sql`](./supabase/migrations/add_game_and_notifications.sql) — `game_high_score` + `notifications` table/triggers
+- [`supabase/migrations/add_message_notifications.sql`](./supabase/migrations/add_message_notifications.sql) — DM notification type + preview `body`
+- [`supabase/migrations/fix_notifications_user_id.sql`](./supabase/migrations/fix_notifications_user_id.sql) — **required** rename `recipient_id` → `user_id` + RLS (fixes empty notification panel)
+
+Stories upload to the public `cat-photos` bucket under the `stories/` prefix (same bucket policies as other uploads).
+
+**Profile isolation:** own settings live at `/profile`; other cats at `/profile/:userId` (legacy `/u/:username` redirects).
+
+**Treat Catcher:** 30s mini-game from the navbar / profile; high score stored on `profiles.game_high_score`.
+
+**Notifications:** DB triggers create like/comment/follow rows (no self-actions); heart badge in the header marks them read when opened.
+
+---
+
+## Theme & language
+
+- **Light / Dark** toggle in the navbar (`ThemeProvider` + Tailwind `dark:` classes). Preference is stored in `localStorage`.
+- **EN / TR** language toggle beside it (`src/i18n/translations.ts`).
+
+Palette: soft sunset pastels in light mode; midnight velvet + purple glow borders in dark mode.
 
 ---
 
@@ -114,15 +143,17 @@ VITE_APP_URL=https://YOUR-APP.vercel.app
 - Service layer under `src/services/`:
   - `supabaseClient.ts` — **central** `createClient` using `VITE_SUPABASE_*` env vars
   - `auth.ts` — signup / login / logout
-  - `posts.ts` — global feed, create post, likes, comments
-  - `messages.ts` — conversations + Realtime `channel()` listeners
-  - `profiles.ts` — profile CRUD + follows
+  - `posts.ts` — global discovery feed, create post, likes, comments
+  - `messages.ts` — peer-based DMs (`sender_id` / `receiver_id`) + Realtime listeners
+  - `profiles.ts` — profile CRUD, username search, follows
   - `storage.ts` — image uploads to the `cat-photos` bucket
   - `api.ts` — facade re-exports
+  - `ThemeContext` — light/dark mode
 
 ### Realtime
 
-- Active chat subscribes to `messages` inserts for that conversation
+- Active chat subscribes to `messages` inserts for the open peer thread
+- Inbox + Toastify listen for all DMs involving the current user
 - Feed refreshes on `posts` / `likes` / `comments` changes
 
 ---
@@ -131,11 +162,13 @@ VITE_APP_URL=https://YOUR-APP.vercel.app
 
 | Path | Page |
 | --- | --- |
-| `/auth` | Sign up / Sign in |
-| `/` | Global feed + create post + Mama Streak |
-| `/profile` | Edit profile + photo + grid |
+| `/auth` | Sign up / Sign in (username required) |
+| `/` | Global discovery feed + stories + create post |
+| `/search` | Live username / name search |
+| `/profile` | Own editable profile + Treat Catcher entry |
+| `/profile/:userId` | Isolated public profile + high score + follow |
+| `/u/:username` | Redirects to `/profile/:userId` |
 | `/messages` | Live DM split pane |
-| `/dashboard` | Mama Streak (device-local) |
 
 ---
 

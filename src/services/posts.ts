@@ -1,20 +1,18 @@
 import { requireSupabase } from '@/services/supabaseClient'
-import {
-  extractTags,
-  mapComment,
-  mapPost,
-  mapStoriesFromPosts,
-} from '@/services/mappers'
+import { extractTags, mapComment, mapPost } from '@/services/mappers'
 import { uploadPostImage } from '@/services/storage'
-import type { Comment, Post, Story } from '@/types'
+import { createNotification } from '@/services/notifications'
+import type { Comment, Post } from '@/types'
 import type { DbComment, DbPost, DbProfile } from '@/types/database'
 
+type AuthorFields = Pick<DbProfile, 'id' | 'name' | 'avatar_url' | 'username'>
+
 type PostRow = DbPost & {
-  profiles: Pick<DbProfile, 'id' | 'name' | 'avatar_url'> | null
+  profiles: AuthorFields | null
   likes: { user_id: string }[] | null
   comments:
     | (DbComment & {
-        profiles: Pick<DbProfile, 'id' | 'name' | 'avatar_url'> | null
+        profiles: AuthorFields | null
       })[]
     | null
 }
@@ -52,6 +50,7 @@ const postSelect = `
   profiles:user_id (
     id,
     name,
+    username,
     avatar_url
   ),
   likes (
@@ -66,17 +65,24 @@ const postSelect = `
     profiles:user_id (
       id,
       name,
+      username,
       avatar_url
     )
   )
 `
 
+/**
+ * Global discovery feed: all public posts, newest first.
+ * Follow status is applied in the UI (badge / Follow button), not as a hard filter.
+ */
 export async function fetchFeed(currentUserId: string | null): Promise<Post[]> {
   const supabase = requireSupabase()
+
   const { data, error } = await supabase
     .from('posts')
     .select(postSelect)
     .order('created_at', { ascending: false })
+    .limit(60)
 
   if (error) throw new Error(error.message)
   return ((data ?? []) as unknown as PostRow[]).map((row) =>
@@ -99,13 +105,6 @@ export async function fetchUserPosts(
   return ((data ?? []) as unknown as PostRow[]).map((row) =>
     toUiPost(row, currentUserId),
   )
-}
-
-export async function fetchStories(
-  currentUserId: string,
-): Promise<Story[]> {
-  const posts = await fetchFeed(currentUserId)
-  return mapStoriesFromPosts(posts, currentUserId)
 }
 
 export async function createPost(input: {
@@ -132,6 +131,17 @@ export async function createPost(input: {
   return toUiPost(data as unknown as PostRow, input.userId)
 }
 
+async function getPostAuthorId(postId: string): Promise<string | null> {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from('posts')
+    .select('user_id')
+    .eq('id', postId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data?.user_id as string | undefined) ?? null
+}
+
 export async function toggleLike(
   postId: string,
   userId: string,
@@ -154,6 +164,17 @@ export async function toggleLike(
     user_id: userId,
   })
   if (error) throw new Error(error.message)
+
+  // Notify post author (skip self-likes)
+  const authorId = await getPostAuthorId(postId)
+  if (authorId && authorId !== userId) {
+    await createNotification({
+      userId: authorId,
+      actorId: userId,
+      type: 'like',
+      postId,
+    })
+  }
 }
 
 export async function addComment(
@@ -162,12 +183,13 @@ export async function addComment(
   text: string,
 ): Promise<Comment> {
   const supabase = requireSupabase()
+  const body = text.trim()
   const { data, error } = await supabase
     .from('comments')
     .insert({
       post_id: postId,
       user_id: userId,
-      body: text.trim(),
+      body,
     })
     .select(
       `
@@ -179,6 +201,7 @@ export async function addComment(
       profiles:user_id (
         id,
         name,
+        username,
         avatar_url
       )
     `,
@@ -188,7 +211,18 @@ export async function addComment(
   if (error) throw new Error(error.message)
 
   const row = data as unknown as DbComment & {
-    profiles: Pick<DbProfile, 'id' | 'name' | 'avatar_url'> | null
+    profiles: AuthorFields | null
+  }
+
+  const authorId = await getPostAuthorId(postId)
+  if (authorId && authorId !== userId) {
+    await createNotification({
+      userId: authorId,
+      actorId: userId,
+      type: 'comment',
+      postId,
+      body,
+    })
   }
 
   return mapComment(row, row.profiles)

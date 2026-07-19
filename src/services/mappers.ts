@@ -1,5 +1,19 @@
-import type { CatProfile, Comment, Conversation, Message, Post, Story } from '@/types'
-import type { DbComment, DbMessage, DbPost, DbProfile } from '@/types/database'
+import type {
+  AppNotification,
+  CatProfile,
+  Comment,
+  Conversation,
+  Message,
+  Post,
+} from '@/types'
+import type {
+  DbComment,
+  DbMessage,
+  DbNotification,
+  DbPost,
+  DbProfile,
+} from '@/types/database'
+import { resolveUsername } from '@/utils/username'
 
 export function mapProfile(
   profile: DbProfile,
@@ -7,6 +21,7 @@ export function mapProfile(
 ): CatProfile {
   return {
     id: profile.id,
+    username: resolveUsername(profile.username, profile.id),
     name: profile.name,
     breed: profile.breed,
     age: profile.age,
@@ -15,6 +30,7 @@ export function mapProfile(
     followers: counts.followers ?? 0,
     following: counts.following ?? 0,
     postsCount: counts.postsCount ?? 0,
+    gameHighScore: profile.game_high_score ?? 0,
   }
 }
 
@@ -25,12 +41,14 @@ export function extractTags(caption: string): string[] {
 
 export function mapComment(
   comment: DbComment,
-  author?: Pick<DbProfile, 'id' | 'name' | 'avatar_url'> | null,
+  author?: Pick<DbProfile, 'id' | 'name' | 'avatar_url' | 'username'> | null,
 ): Comment {
+  const authorId = author?.id ?? comment.user_id
   return {
     id: comment.id,
-    authorId: comment.user_id,
+    authorId,
     authorName: author?.name ?? 'Cat',
+    authorUsername: resolveUsername(author?.username, authorId),
     authorAvatar: author?.avatar_url ?? '',
     text: comment.body,
     createdAt: comment.created_at,
@@ -39,14 +57,16 @@ export function mapComment(
 
 export function mapPost(
   post: DbPost,
-  author: Pick<DbProfile, 'id' | 'name' | 'avatar_url'> | null | undefined,
+  author: Pick<DbProfile, 'id' | 'name' | 'avatar_url' | 'username'> | null | undefined,
   likes: { count: number; likedByMe: boolean },
   comments: Comment[],
 ): Post {
+  const authorId = author?.id ?? post.user_id
   return {
     id: post.id,
-    authorId: post.user_id,
+    authorId,
     authorName: author?.name ?? 'Cat',
+    authorUsername: resolveUsername(author?.username, authorId),
     authorAvatar: author?.avatar_url ?? '',
     image: post.image_url,
     caption: post.caption,
@@ -62,20 +82,21 @@ export function mapMessage(message: DbMessage): Message {
   return {
     id: message.id,
     senderId: message.sender_id,
-    text: message.body,
+    receiverId: message.receiver_id,
+    text: message.content ?? '',
     createdAt: message.created_at,
   }
 }
 
 export function mapConversation(params: {
-  id: string
   participant: CatProfile
   messages: Message[]
 }): Conversation {
   const last = params.messages[params.messages.length - 1]
   return {
-    id: params.id,
+    id: params.participant.id,
     participantId: params.participant.id,
+    participantUsername: params.participant.username,
     participantName: params.participant.name,
     participantAvatar: params.participant.avatar,
     lastMessage: last?.text ?? '',
@@ -85,22 +106,24 @@ export function mapConversation(params: {
   }
 }
 
-export function mapStoriesFromPosts(posts: Post[], currentUserId: string): Story[] {
-  const seen = new Set<string>()
-  const stories: Story[] = []
-
-  for (const post of posts) {
-    if (post.authorId === currentUserId || seen.has(post.authorId)) continue
-    seen.add(post.authorId)
-    stories.push({
-      id: `story-${post.authorId}`,
-      authorId: post.authorId,
-      authorName: post.authorName,
-      authorAvatar: post.authorAvatar,
-      viewed: false,
-    })
-    if (stories.length >= 12) break
+export function mapNotification(
+  row: DbNotification,
+  actor?: Pick<DbProfile, 'id' | 'name' | 'avatar_url' | 'username'> | null,
+): AppNotification {
+  const actorId = actor?.id ?? row.actor_id
+  return {
+    id: row.id,
+    recipientId: row.user_id,
+    actorId,
+    // profiles.name is the cat display name (no cat_name column)
+    actorName: actor?.name ?? 'Cat',
+    actorUsername: resolveUsername(actor?.username, actorId),
+    actorAvatar: actor?.avatar_url ?? '',
+    type: row.type,
+    postId: row.post_id,
+    conversationId: row.conversation_id ?? null,
+    body: row.body ?? '',
+    isRead: row.is_read,
+    createdAt: row.created_at,
   }
-
-  return stories
 }

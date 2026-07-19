@@ -8,21 +8,16 @@ import {
   type ReactNode,
 } from 'react'
 import type {
+  AppNotification,
   CatProfile,
   Conversation,
   Language,
-  MamaStreak,
   Message,
   Post,
   Story,
 } from '@/types'
 import { isSupabaseConfigured, requireSupabase } from '@/services/supabaseClient'
 import * as api from '@/services/api'
-import {
-  loadStreakFromStorage,
-  markFedToday,
-  saveStreakToStorage,
-} from '@/utils/streak'
 
 interface AppContextValue {
   isConfigured: boolean
@@ -41,14 +36,17 @@ interface AppContextValue {
     breed: string
     age: number
     bio: string
+    username?: string
     avatarFile?: File | null
   }) => Promise<void>
   posts: Post[]
   stories: Story[]
   feedLoading: boolean
   feedError: string | null
-  refreshFeed: () => Promise<void>
+  refreshFeed: (options?: { silent?: boolean }) => Promise<void>
   createPost: (file: File, caption: string) => Promise<void>
+  createStory: (file: File) => Promise<void>
+  markStoriesAsViewed: (storyIds: string[]) => void
   toggleLike: (postId: string) => Promise<void>
   addComment: (postId: string, text: string) => Promise<void>
   followingIds: string[]
@@ -57,11 +55,21 @@ interface AppContextValue {
   conversations: Conversation[]
   activeConversationId: string | null
   setActiveConversationId: (id: string | null) => void
-  sendMessage: (conversationId: string, text: string) => Promise<void>
+  /** Send a DM to a peer (peer user id, not a conversation uuid). */
+  sendMessage: (peerId: string, text: string) => Promise<void>
   chatsLoading: boolean
-  refreshChats: () => Promise<void>
-  streak: MamaStreak
-  feedCat: () => void
+  refreshChats: (options?: { silent?: boolean }) => Promise<void>
+  notifications: AppNotification[]
+  unreadNotificationCount: number
+  refreshNotifications: () => Promise<void>
+  markNotificationsAsRead: () => Promise<void>
+  notificationsOpen: boolean
+  openNotifications: () => void
+  closeNotifications: () => void
+  gameOpen: boolean
+  openGame: () => void
+  closeGame: () => void
+  submitGameScore: (score: number) => Promise<{ isNewHigh: boolean }>
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -87,7 +95,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     null,
   )
   const [chatsLoading, setChatsLoading] = useState(false)
-  const [streak, setStreak] = useState<MamaStreak>(loadStreakFromStorage)
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [gameOpen, setGameOpen] = useState(false)
 
   const setLanguage = useCallback((next: Language) => {
     setLanguageState(next)
@@ -103,13 +113,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setFeedError(null)
       }
       try {
-        const [feedData, storyData, following] = await Promise.all([
+        const [feedData, following, storyResult] = await Promise.all([
           api.fetchFeed(currentUser.id),
-          api.fetchStories(currentUser.id),
           api.fetchFollowingIds(currentUser.id),
+          api.fetchStories(currentUser.id).catch((error) => {
+            console.warn('[stories] unavailable — run add_stories.sql?', error)
+            return [] as Story[]
+          }),
         ])
         setPosts(feedData)
-        setStories(storyData)
+        setStories(storyResult)
         setFollowingIds(following)
       } catch (error) {
         if (!silent) {
@@ -148,6 +161,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentUser(profile)
   }, [])
 
+  const refreshNotifications = useCallback(async () => {
+    if (!currentUser) return
+    try {
+      const data = await api.fetchNotifications(currentUser.id)
+      setNotifications(data)
+    } catch (error) {
+      console.warn(
+        '[notifications] unavailable — run fix_notifications_user_id.sql?',
+        error,
+      )
+    }
+  }, [currentUser])
+
+  const markNotificationsAsRead = useCallback(async () => {
+    if (!currentUser) return
+    const hadUnread = notifications.some((n) => !n.isRead)
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+    try {
+      await api.markNotificationsRead(currentUser.id)
+    } catch (error) {
+      console.error(error)
+      if (hadUnread) void refreshNotifications()
+    }
+  }, [currentUser, notifications, refreshNotifications])
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setAuthReady(true)
@@ -182,6 +220,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setStories([])
         setConversations([])
         setFollowingIds([])
+        setNotifications([])
+        setNotificationsOpen(false)
+        setGameOpen(false)
         return
       }
       void bootstrapSession(session.user.id)
@@ -197,7 +238,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return
     void refreshFeed()
     void refreshChats()
-  }, [currentUser, refreshFeed, refreshChats])
+    void refreshNotifications()
+  }, [currentUser, refreshFeed, refreshChats, refreshNotifications])
+
+  // Notification realtime is handled by RealtimeAlerts (toast + refresh).
 
   // Live global feed: posts / likes / comments via supabase.channel()
   useEffect(() => {
@@ -207,33 +251,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [currentUser, refreshFeed])
 
-  // Live chat thread for the open conversation
+  // Load full chronological history whenever a peer thread is opened
   useEffect(() => {
-    if (!activeConversationId || !isSupabaseConfigured) return
+    if (!currentUser || !activeConversationId || !isSupabaseConfigured) return
+    let cancelled = false
 
-    return api.subscribeToMessages(activeConversationId, (message: Message) => {
-      setConversations((prev) =>
-        prev.map((chat) => {
-          if (chat.id !== activeConversationId) return chat
-          if (chat.messages.some((item) => item.id === message.id)) return chat
-          return {
-            ...chat,
-            messages: [...chat.messages, message],
-            lastMessage: message.text,
-            updatedAt: message.createdAt,
+    void (async () => {
+      try {
+        const next = await api.ensureConversation(
+          currentUser.id,
+          activeConversationId,
+        )
+        if (cancelled) return
+        setConversations((prev) => {
+          if (prev.some((chat) => chat.id === next.id)) {
+            return prev.map((chat) => (chat.id === next.id ? next : chat))
           }
-        }),
-      )
-    })
-  }, [activeConversationId])
+          return [next, ...prev]
+        })
+      } catch (error) {
+        console.error('[messages] failed to load thread', error)
+      }
+    })()
 
-  // Keep DM list previews in sync for any conversation the user belongs to
+    return () => {
+      cancelled = true
+    }
+  }, [activeConversationId, currentUser])
+
+  // Live chat thread for the open peer DM
+  useEffect(() => {
+    if (!currentUser || !activeConversationId || !isSupabaseConfigured) return
+
+    return api.subscribeToMessages(
+      activeConversationId,
+      currentUser.id,
+      (message: Message) => {
+        setConversations((prev) =>
+          prev.map((chat) => {
+            if (chat.id !== activeConversationId) return chat
+            if (chat.messages.some((item) => item.id === message.id)) return chat
+            return {
+              ...chat,
+              messages: [...chat.messages, message],
+              lastMessage: message.text,
+              updatedAt: message.createdAt,
+            }
+          }),
+        )
+      },
+    )
+  }, [activeConversationId, currentUser])
+
+  // Keep DM inbox previews in sync for all peers
   useEffect(() => {
     if (!currentUser || !isSupabaseConfigured) return
 
-    return api.subscribeToAllMessages((message) => {
+    return api.subscribeToAllMessages(currentUser.id, (message) => {
+      const peerId =
+        message.senderId === currentUser.id
+          ? message.receiverId
+          : message.senderId
+
       setConversations((prev) => {
-        const exists = prev.some((chat) => chat.id === message.conversationId)
+        const exists = prev.some((chat) => chat.id === peerId)
         if (!exists) {
           void refreshChats({ silent: true })
           return prev
@@ -241,7 +322,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         return prev
           .map((chat) => {
-            if (chat.id !== message.conversationId) return chat
+            if (chat.id !== peerId) return chat
             if (chat.messages.some((item) => item.id === message.id)) return chat
             return {
               ...chat,
@@ -257,10 +338,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
     })
   }, [currentUser, refreshChats])
-
-  useEffect(() => {
-    saveStreakToStorage(streak)
-  }, [streak])
 
   const signUp = useCallback(async (input: api.SignUpInput) => {
     // Never auto-login after signup — email must be verified first.
@@ -283,6 +360,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.signOut()
     setCurrentUser(null)
+    setPosts([])
+    setStories([])
+    setFollowingIds([])
+    setConversations([])
+    setNotifications([])
+    setNotificationsOpen(false)
+    setGameOpen(false)
   }, [])
 
   const updateProfile = useCallback(
@@ -291,6 +375,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       breed: string
       age: number
       bio: string
+      username?: string
       avatarFile?: File | null
     }) => {
       if (!currentUser) return
@@ -312,6 +397,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [currentUser],
   )
+
+  const createStory = useCallback(
+    async (file: File) => {
+      if (!currentUser) return
+      const story = await api.createStory({
+        userId: currentUser.id,
+        file,
+      })
+      setStories((prev) => [story, ...prev.filter((s) => s.id !== story.id)])
+    },
+    [currentUser],
+  )
+
+  const markStoriesAsViewed = useCallback((storyIds: string[]) => {
+    if (!storyIds.length) return
+    api.markStoriesViewed(storyIds)
+    setStories((prev) =>
+      prev.map((story) =>
+        storyIds.includes(story.id) ? { ...story, viewed: true } : story,
+      ),
+    )
+  }, [])
 
   const toggleLike = useCallback(
     async (postId: string) => {
@@ -369,54 +476,90 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ? [...prev, catId]
           : prev.filter((id) => id !== catId),
       )
+      // Refresh feed so newly followed cats appear (or disappear when unfollowed)
+      void refreshFeed({ silent: true })
+      // Keep own following tally in sync
+      void api.fetchProfileById(currentUser.id).then(setCurrentUser)
     },
-    [currentUser],
+    [currentUser, refreshFeed],
   )
 
   const startChatWith = useCallback(
     async (friendId: string) => {
       if (!currentUser) throw new Error('Not signed in')
-      const conversationId = await api.getOrCreateConversation(
-        currentUser.id,
-        friendId,
-      )
-      await refreshChats()
-      setActiveConversationId(conversationId)
-      return conversationId
-    },
-    [currentUser, refreshChats],
-  )
-
-  const sendMessage = useCallback(
-    async (conversationId: string, text: string) => {
-      if (!currentUser || !text.trim()) return
-      const message = await api.sendMessage(conversationId, currentUser.id, text)
-
-      setConversations((prev) =>
-        prev.map((chat) => {
-          if (chat.id !== conversationId) return chat
-          if (chat.messages.some((item) => item.id === message.id)) {
-            return {
-              ...chat,
-              lastMessage: message.text,
-              updatedAt: message.createdAt,
-            }
-          }
-          return {
-            ...chat,
-            messages: [...chat.messages, message],
-            lastMessage: message.text,
-            updatedAt: message.createdAt,
-          }
-        }),
-      )
+      const peerId = await api.getOrCreateConversation(currentUser.id, friendId)
+      const shell = await api.ensureConversation(currentUser.id, peerId)
+      setConversations((prev) => {
+        if (prev.some((chat) => chat.id === shell.id)) {
+          return prev.map((chat) => (chat.id === shell.id ? shell : chat))
+        }
+        return [shell, ...prev]
+      })
+      setActiveConversationId(peerId)
+      return peerId
     },
     [currentUser],
   )
 
-  const feedCat = useCallback(() => {
-    setStreak((prev) => markFedToday(prev))
-  }, [])
+  const sendMessage = useCallback(
+    async (peerId: string, text: string) => {
+      if (!currentUser || !text.trim()) return
+      const message = await api.sendMessage(peerId, currentUser.id, text)
+
+      setConversations((prev) => {
+        const exists = prev.some((chat) => chat.id === peerId)
+        if (!exists) {
+          void refreshChats({ silent: true })
+          return prev
+        }
+        return prev
+          .map((chat) => {
+            if (chat.id !== peerId) return chat
+            if (chat.messages.some((item) => item.id === message.id)) {
+              return {
+                ...chat,
+                lastMessage: message.text,
+                updatedAt: message.createdAt,
+              }
+            }
+            return {
+              ...chat,
+              messages: [...chat.messages, message],
+              lastMessage: message.text,
+              updatedAt: message.createdAt,
+            }
+          })
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+          )
+      })
+    },
+    [currentUser, refreshChats],
+  )
+
+  const openNotifications = useCallback(() => setNotificationsOpen(true), [])
+  const closeNotifications = useCallback(() => setNotificationsOpen(false), [])
+  const openGame = useCallback(() => setGameOpen(true), [])
+  const closeGame = useCallback(() => setGameOpen(false), [])
+
+  const submitGameScore = useCallback(
+    async (score: number) => {
+      if (!currentUser) return { isNewHigh: false }
+      const { profile, isNewHigh } = await api.updateGameHighScore(
+        currentUser.id,
+        score,
+      )
+      setCurrentUser(profile)
+      return { isNewHigh }
+    },
+    [currentUser],
+  )
+
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.isRead).length,
+    [notifications],
+  )
 
   const value = useMemo<AppContextValue>(
     () => ({
@@ -438,6 +581,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       feedError,
       refreshFeed,
       createPost,
+      createStory,
+      markStoriesAsViewed,
       toggleLike,
       addComment,
       followingIds,
@@ -449,8 +594,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendMessage,
       chatsLoading,
       refreshChats,
-      streak,
-      feedCat,
+      notifications,
+      unreadNotificationCount,
+      refreshNotifications,
+      markNotificationsAsRead,
+      notificationsOpen,
+      openNotifications,
+      closeNotifications,
+      gameOpen,
+      openGame,
+      closeGame,
+      submitGameScore,
     }),
     [
       authReady,
@@ -469,6 +623,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       feedError,
       refreshFeed,
       createPost,
+      createStory,
+      markStoriesAsViewed,
       toggleLike,
       addComment,
       followingIds,
@@ -479,8 +635,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendMessage,
       chatsLoading,
       refreshChats,
-      streak,
-      feedCat,
+      notifications,
+      unreadNotificationCount,
+      refreshNotifications,
+      markNotificationsAsRead,
+      notificationsOpen,
+      openNotifications,
+      closeNotifications,
+      gameOpen,
+      openGame,
+      closeGame,
+      submitGameScore,
     ],
   )
 

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { LanguageToggle } from '@/components/common/LanguageToggle'
+import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { SetupBanner } from '@/components/common/SetupBanner'
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'verify-sent'
@@ -26,6 +27,7 @@ export function AuthPage() {
   const [form, setForm] = useState({
     email: '',
     password: '',
+    username: '',
     name: '',
     breed: '',
     age: '1',
@@ -81,21 +83,21 @@ export function AuthPage() {
         const result = await signUp({
           email: form.email,
           password: form.password,
+          username: form.username,
           name: form.name.trim() || 'Cat',
           breed: form.breed.trim() || 'Mixed',
           age: Number(form.age) || 1,
           bio: form.bio.trim(),
-          avatarFile: null, // photos only after email verification + login
+          avatarFile: null,
         })
 
         setPendingEmail(result.email)
-        toast.success(
-          'Awesome! Please check your email inbox to verify your account before logging in.',
-        )
+        toast.success(t.auth.verifyEmailToast)
 
         setForm({
           email: '',
           password: '',
+          username: '',
           name: '',
           breed: '',
           age: '1',
@@ -111,8 +113,19 @@ export function AuthPage() {
         status: authErr?.status,
         err,
       })
-      const message =
+      let message =
         err instanceof Error ? err.message : t.auth.authFailed
+      if (
+        err instanceof Error &&
+        (err.name === 'UsernameTakenError' || err.message === 'USERNAME_TAKEN')
+      ) {
+        message = t.auth.usernameTaken
+      } else if (
+        err instanceof Error &&
+        err.message.toLowerCase().includes('username must be')
+      ) {
+        message = t.auth.usernameInvalid
+      }
       setError(message)
       toast.error(message)
     } finally {
@@ -122,7 +135,8 @@ export function AuthPage() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center px-4 py-10">
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex gap-2">
+        <ThemeToggle />
         <LanguageToggle />
       </div>
 
@@ -237,6 +251,19 @@ export function AuthPage() {
               {mode === 'signup' ? (
                 <>
                   <AuthField
+                    label={t.profile.username}
+                    value={form.username}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        username: value.toLowerCase().replace(/\s+/g, ''),
+                      }))
+                    }
+                    required
+                    hint={t.profile.usernameHint}
+                    pattern="[a-z0-9_]{3,24}"
+                  />
+                  <AuthField
                     label={t.profile.name}
                     value={form.name}
                     onChange={(value) =>
@@ -326,26 +353,35 @@ function AuthField({
   onChange,
   type = 'text',
   required = false,
+  hint,
+  pattern,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   type?: string
   required?: boolean
+  hint?: string
+  pattern?: string
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {label}
       </span>
       <input
         type={type}
         value={value}
         required={required}
-        minLength={type === 'password' ? 6 : undefined}
+        pattern={pattern}
+        minLength={type === 'password' ? 6 : pattern ? 3 : undefined}
+        maxLength={pattern ? 24 : undefined}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
+        className="input-field"
       />
+      {hint ? (
+        <span className="mt-1 block text-[11px] text-slate-400">{hint}</span>
+      ) : null}
     </label>
   )
 }

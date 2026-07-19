@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Gamepad2 } from 'lucide-react'
+import { toast } from 'react-toastify'
 import type { Post } from '@/types'
 import { fetchUserPosts } from '@/services/api'
 import { useApp } from '@/context/AppContext'
@@ -8,7 +10,7 @@ import { ImageUpload } from '@/components/common/ImageUpload'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 
 export function ProfilePage() {
-  const { currentUser, updateProfile, followingIds } = useApp()
+  const { currentUser, updateProfile, followingIds, openGame } = useApp()
   const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -18,6 +20,7 @@ export function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [form, setForm] = useState({
+    username: '',
     name: '',
     breed: '',
     age: '1',
@@ -27,6 +30,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (!currentUser) return
     setForm({
+      username: currentUser.username,
       name: currentUser.name,
       breed: currentUser.breed,
       age: String(currentUser.age),
@@ -65,6 +69,7 @@ export function ProfilePage() {
 
     try {
       await updateProfile({
+        username: form.username,
         name: form.name.trim() || currentUser.name,
         breed: form.breed.trim() || currentUser.breed,
         age: Number(form.age) || currentUser.age,
@@ -74,9 +79,20 @@ export function ProfilePage() {
       setAvatarFile(null)
       setEditing(false)
       setSaved(true)
+      toast.success(t.profile.saved)
       window.setTimeout(() => setSaved(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update failed')
+      let message = err instanceof Error ? err.message : 'Update failed'
+      if (
+        err instanceof Error &&
+        (err.name === 'UsernameTakenError' || err.message === 'USERNAME_TAKEN')
+      ) {
+        message = t.auth.usernameTaken
+      } else if (err instanceof Error && err.message === 'USERNAME_INVALID') {
+        message = t.auth.usernameInvalid
+      }
+      setError(message)
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -93,32 +109,55 @@ export function ProfilePage() {
             ring
           />
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="font-brand text-2xl font-bold text-slate-700">
+            <h2 className="font-brand text-2xl font-bold text-slate-700 dark:text-slate-100">
               {currentUser.name}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-0.5 text-sm font-semibold text-pink-500">
+              @{currentUser.username}
+            </p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {currentUser.breed} · {currentUser.age} {t.profile.years}
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+            <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
               {currentUser.bio}
             </p>
 
-            <div className="mt-4 flex justify-center gap-6 sm:justify-start">
+            <div className="mt-4 flex flex-wrap justify-center gap-6 sm:justify-start">
               <Stat
                 label={t.profile.posts}
                 value={posts.length || currentUser.postsCount}
               />
               <Stat label={t.profile.followers} value={currentUser.followers} />
-              <Stat label={t.profile.following} value={followingIds.length} />
+              <Stat
+                label={t.profile.following}
+                value={currentUser.following || followingIds.length}
+              />
+              <div className="flex items-center gap-1.5">
+                <Gamepad2 className="h-4 w-4 text-pink-500" />
+                <Stat
+                  label={t.game.highScore}
+                  value={currentUser.gameHighScore}
+                />
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setEditing((prev) => !prev)}
-              className="mt-4 rounded-2xl bg-purple-50 px-4 py-2 text-sm font-bold text-purple-600 transition hover:bg-pink-100"
-            >
-              {editing ? t.profile.cancel : t.profile.edit}
-            </button>
+            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+              <button
+                type="button"
+                onClick={openGame}
+                className="btn-primary-sm"
+              >
+                <Gamepad2 className="h-4 w-4" />
+                {t.game.play}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing((prev) => !prev)}
+                className="rounded-2xl bg-purple-50 px-4 py-2 text-sm font-bold text-purple-600 transition hover:bg-pink-100 dark:bg-purple-950/40 dark:text-pink-300"
+              >
+                {editing ? t.profile.cancel : t.profile.edit}
+              </button>
+            </div>
             {saved ? (
               <p className="mt-2 text-sm font-semibold text-pink-600">
                 {t.profile.saved}
@@ -132,6 +171,32 @@ export function ProfilePage() {
             onSubmit={(event) => void handleSave(event)}
             className="mt-6 grid gap-3 sm:grid-cols-2"
           >
+            <label className="sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {t.profile.username}
+              </span>
+              <input
+                type="text"
+                value={form.username}
+                required
+                pattern="[a-z0-9_]{3,24}"
+                minLength={3}
+                maxLength={24}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    username: event.target.value
+                      .toLowerCase()
+                      .replace(/\s+/g, '')
+                      .replace(/[^a-z0-9_]/g, ''),
+                  }))
+                }
+                className="input-field"
+              />
+              <span className="mt-1 block text-[11px] text-slate-400">
+                {t.profile.usernameHint}
+              </span>
+            </label>
             <Field
               label={t.profile.name}
               value={form.name}
@@ -159,7 +224,7 @@ export function ProfilePage() {
               />
             </div>
             <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 {t.profile.bio}
               </span>
               <textarea
@@ -168,7 +233,7 @@ export function ProfilePage() {
                   setForm((prev) => ({ ...prev, bio: event.target.value }))
                 }
                 rows={3}
-                className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
+                className="input-field"
               />
             </label>
             {error ? (
@@ -186,7 +251,7 @@ export function ProfilePage() {
       </section>
 
       <section className="animate-fade-up">
-        <h3 className="mb-3 px-1 font-brand text-lg font-bold text-slate-700">
+        <h3 className="mb-3 px-1 font-brand text-lg font-bold text-slate-700 dark:text-slate-100">
           {t.profile.posts}
         </h3>
         {loadingPosts ? (
@@ -236,14 +301,14 @@ function Field({
 }) {
   return (
     <label>
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {label}
       </span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2.5 text-sm outline-none focus:border-pink-300"
+        className="input-field"
       />
     </label>
   )
