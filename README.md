@@ -193,9 +193,14 @@ supabase/
 
 1. Push repo to GitHub
 2. Import in Vercel (framework: Vite, output: `dist`)
-3. Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
+3. In **Project → Settings → Environment Variables**, set for Production (and Preview if needed):
+   - `VITE_SUPABASE_URL` = `https://YOUR_PROJECT_REF.supabase.co` (no trailing slash, no quotes)
+   - `VITE_SUPABASE_ANON_KEY` = anon public key
+   - `VITE_APP_URL` = your Vercel URL (e.g. `https://catstagram.vercel.app`)
 4. Confirm `vercel.json` SPA rewrite is present
-5. Redeploy after env changes
+5. **Redeploy** after any env change (Vite bakes `VITE_*` in at build time)
+
+If Auth returns 404 on Vercel but works locally, the build almost always lacked the `VITE_` env vars — add them and redeploy.
 
 ---
 

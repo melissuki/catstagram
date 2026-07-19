@@ -148,6 +148,15 @@ export async function signIn(input: SignInInput): Promise<CatProfile> {
           'Please verify your email before signing in. Check your inbox for the Catstagram activation link.',
         )
       }
+      if (
+        error.status === 404 ||
+        message.includes('failed to fetch') ||
+        message.includes('networkerror')
+      ) {
+        throw new Error(
+          'Cannot reach Supabase Auth (404/network). On Vercel, set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then Redeploy.',
+        )
+      }
       throw new Error(error.message)
     }
 
