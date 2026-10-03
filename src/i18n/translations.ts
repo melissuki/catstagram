@@ -194,6 +194,9 @@ export const translations = {
       welcomeBack: 'Welcome back to Catstagram!',
       authFailed: 'Something went wrong. Please try again.',
       usernameTaken: 'This username is already taken!',
+      emailTaken: 'This e-mail already has an account. Sign in, or use “Forgot password”.',
+      weakPassword: 'Password is too weak. Use at least 8 characters with letters and numbers.',
+      invalidEmail: 'Please enter a valid e-mail address.',
       usernameInvalid:
         'Username must be 3–24 characters: lowercase letters, numbers, underscore only (no spaces).',
       invalidCredentials: 'Incorrect email or password.',
@@ -418,6 +421,9 @@ export const translations = {
       welcomeBack: "Catstagram'a tekrar hoş geldin!",
       authFailed: 'Bir şeyler ters gitti. Lütfen tekrar dene.',
       usernameTaken: 'Bu kullanıcı adı zaten alınmış!',
+      emailTaken: 'Bu e-posta ile zaten bir hesap var. Giriş yap ya da “Şifremi Unuttum” seçeneğini kullan.',
+      weakPassword: 'Şifre çok zayıf. Harf ve rakam içeren en az 8 karakter kullan.',
+      invalidEmail: 'Lütfen geçerli bir e-posta adresi gir.',
       usernameInvalid:
         'Kullanıcı adı 3–24 karakter olmalı: sadece küçük harf, rakam ve alt çizgi (boşluksuz).',
       invalidCredentials: 'E-posta veya şifre hatalı.',

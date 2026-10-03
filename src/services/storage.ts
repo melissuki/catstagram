@@ -8,6 +8,17 @@ type UploadFolder = 'public' | 'stories'
 /** Mirrors the bucket's file_size_limit in security_hardening_v2.sql. */
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
+/** Raster images only (no SVG, which can carry scripts). Mirrors the bucket. */
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/avif',
+])
+
 function buildFilePath(file: File, folder: UploadFolder, userId: string): string {
   const cleanExtension = (file.name.split('.').pop() || 'jpg')
     .toLowerCase()
@@ -30,7 +41,7 @@ async function uploadToCatPhotos(
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  if (!file.type.startsWith('image/')) throw new Error('Only images can be uploaded')
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) throw new Error('Only JPEG, PNG, WebP, GIF or HEIC photos can be uploaded')
   if (file.size > MAX_UPLOAD_BYTES) throw new Error('Image is too large (max 10 MB)')
 
   const filePath = buildFilePath(file, folder, user.id)

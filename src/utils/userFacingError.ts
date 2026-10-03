@@ -11,13 +11,31 @@ export function toUserFacingError(
   const raw = error.message?.trim() || ''
   const lower = raw.toLowerCase()
 
-  if (
-    error.name === 'UsernameTakenError' ||
-    raw === 'USERNAME_TAKEN' ||
-    lower.includes('already registered') ||
-    lower.includes('user already exists')
-  ) {
+  if (error.name === 'UsernameTakenError' || raw === 'USERNAME_TAKEN') {
     return 'USERNAME_TAKEN'
+  }
+
+  // The e-mail (not the username) already has an account
+  if (
+    raw === 'EMAIL_TAKEN' ||
+    lower.includes('already registered') ||
+    lower.includes('user already exists') ||
+    lower.includes('email address is already')
+  ) {
+    return 'EMAIL_TAKEN'
+  }
+
+  if (lower.includes('password should') || lower.includes('weak password') || lower.includes('weak_password')) {
+    return 'WEAK_PASSWORD'
+  }
+
+  if (lower.includes('invalid format') || lower.includes('email address') && lower.includes('invalid')) {
+    return 'INVALID_EMAIL'
+  }
+
+  // Signup trigger failed server-side; never show the raw database message
+  if (lower.includes('database error saving new user')) {
+    return 'SIGNUP_FAILED'
   }
 
   if (lower.includes('username must be')) {

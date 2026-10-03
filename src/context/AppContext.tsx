@@ -302,12 +302,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       void api
         .claimDailyLogin()
         .then((result) => {
-          if (!result.awarded) return
           setCurrentUser((prev) =>
             prev && prev.id === userId
               ? { ...prev, coins: result.coins, loginStreak: result.streakDay }
               : prev,
           )
+          if (!result.awarded) return
           const t = getTranslations(language)
           toast.success(
             t.economy.dailyLogin

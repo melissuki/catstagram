@@ -1,3 +1,4 @@
+import { clampAge } from '@/utils/age'
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Cat, LoaderCircle, MailCheck } from 'lucide-react'
@@ -88,7 +89,7 @@ export function AuthPage() {
           username: form.username,
           name: sanitizeUserText(form.name, 80) || 'Cat',
           breed: sanitizeUserText(form.breed, 80) || 'Mixed',
-          age: Number(form.age) || 1,
+          age: clampAge(form.age),
           bio: sanitizeUserText(form.bio, 500),
           avatarFile: null,
         })
@@ -113,6 +114,10 @@ export function AuthPage() {
       const code = toUserFacingError(err, t.auth.authFailed)
       let message: string = t.auth.authFailed
       if (code === 'USERNAME_TAKEN') message = t.auth.usernameTaken
+      else if (code === 'EMAIL_TAKEN') message = t.auth.emailTaken
+      else if (code === 'WEAK_PASSWORD') message = t.auth.weakPassword
+      else if (code === 'INVALID_EMAIL') message = t.auth.invalidEmail
+      else if (code === 'SIGNUP_FAILED') message = t.auth.authFailed
       else if (code === 'USERNAME_INVALID') message = t.auth.usernameInvalid
       else if (code === 'EMAIL_NOT_CONFIRMED') message = t.auth.verifyEmailHint
       else if (code === 'INVALID_CREDENTIALS') message = t.auth.invalidCredentials

@@ -52,10 +52,9 @@ export function mapProfile(
       profile.post_streak_count ?? 0,
       profile.post_streak_last_date ?? null,
     ),
-    loginStreak: effectiveStreak(
-      profile.login_streak_count ?? 0,
-      profile.login_streak_last_date ?? null,
-    ),
+    // The last-login date is private; claim_daily_login() keeps this count
+    // current for the signed-in user every day they open the app.
+    loginStreak: profile.login_streak_count ?? 0,
     avatarConfig: resolveAvatarConfig(profile.avatar_config),
   }
 }

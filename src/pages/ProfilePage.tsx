@@ -1,3 +1,4 @@
+import { clampAge } from '@/utils/age'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarCheck, Coins, Flame, Gamepad2, ShoppingBag, Sparkles } from 'lucide-react'
@@ -74,7 +75,7 @@ export function ProfilePage() {
         username: form.username,
         name: form.name.trim() || currentUser.name,
         breed: form.breed.trim() || currentUser.breed,
-        age: Number(form.age) || currentUser.age,
+        age: clampAge(form.age, currentUser.age),
         bio: form.bio.trim(),
         avatarFile,
       })

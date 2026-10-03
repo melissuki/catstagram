@@ -4,6 +4,7 @@ import { fetchProfileById, isUsernameAvailable } from '@/services/profiles'
 import { getAppUrl } from '@/utils/appUrl'
 import { isValidUsername, normalizeUsername } from '@/utils/username'
 import { sanitizeUserText } from '@/utils/sanitize'
+import { clampAge } from '@/utils/age'
 import type { CatProfile } from '@/types'
 
 export interface SignUpInput {
@@ -85,7 +86,7 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
           username,
           name: sanitizeUserText(input.name, 80) || 'Cat',
           breed: sanitizeUserText(input.breed, 80) || 'Mixed',
-          age: input.age,
+          age: clampAge(input.age),
           bio: sanitizeUserText(input.bio, 500),
         },
       },
@@ -103,19 +104,11 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
     // Existing account (Supabase returns user with empty identities)
     const identities = data.user.identities ?? []
     if (identities.length === 0) {
-      throw new Error(
-        'An account with this email already exists. Please sign in or check your inbox for the verification link.',
-      )
+      throw new Error('EMAIL_TAKEN')
     }
 
     // Email confirmation pending OR confirmed — never upload / write profile here.
     // Profile row is created by the `handle_new_user` DB trigger from metadata.
-    console.info('[auth:signUp] success — verification email sent', {
-      email,
-      userId: data.user.id,
-      hasSession: Boolean(data.session),
-      emailConfirmedAt: data.user.email_confirmed_at,
-    })
 
     // If a session slipped through, sign out so the app stays locked until verify + login
     if (data.session) {

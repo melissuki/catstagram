@@ -3,6 +3,7 @@ import { mapConversation, mapMessage, mapProfile } from '@/services/mappers'
 import { createNotification } from '@/services/notifications'
 import { fetchProfileById } from '@/services/profiles'
 import { sanitizeUserText } from '@/utils/sanitize'
+import { PROFILE_COLUMNS } from '@/services/profileColumns'
 import type { Conversation, Message } from '@/types'
 import type { DbMessage, DbProfile } from '@/types/database'
 
@@ -20,7 +21,7 @@ async function fetchProfilesByIds(
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select(PROFILE_COLUMNS)
     .in('id', unique)
 
   if (error) {

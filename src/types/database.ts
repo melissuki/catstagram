@@ -9,14 +9,11 @@ export interface DbProfile {
   age: number
   bio: string
   avatar_url: string
-  food_streak: number
-  last_fed_date: string | null
   game_high_score: number
   coins: number
   post_streak_count: number
   post_streak_last_date: string | null
   login_streak_count: number
-  login_streak_last_date: string | null
   avatar_config: unknown
   created_at: string
   updated_at: string

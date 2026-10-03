@@ -4,6 +4,8 @@ import { uploadAvatar } from '@/services/storage'
 import { createNotification } from '@/services/notifications'
 import { isValidUsername, normalizeUsername } from '@/utils/username'
 import { sanitizeUserText } from '@/utils/sanitize'
+import { PROFILE_COLUMNS } from '@/services/profileColumns'
+import { clampAge } from '@/utils/age'
 import type { CatProfile } from '@/types'
 import type { DbProfile } from '@/types/database'
 
@@ -36,7 +38,7 @@ export async function fetchProfileById(userId: string): Promise<CatProfile> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select(PROFILE_COLUMNS)
     .eq('id', userId)
     .single()
 
@@ -53,7 +55,7 @@ export async function fetchProfileByUsername(
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select(PROFILE_COLUMNS)
     .eq('username', normalized)
     .single()
 
@@ -76,11 +78,13 @@ export async function searchProfilesByUsername(
   const supabase = requireSupabase()
   const raw = query.trim().toLowerCase().replace(/^@+/, '')
   const usernamePart = escapeIlike(normalizeUsername(raw))
-  const namePart = escapeIlike(raw)
+  // Commas, parentheses and quotes are filter syntax in .or(); drop them so
+  // search text can't change the query.
+  const namePart = escapeIlike(raw.replace(/[,()"'\\]/g, ' ').replace(/\s+/g, ' ').trim())
 
   if (usernamePart.length < 1 && namePart.length < 1) return []
 
-  let request = supabase.from('profiles').select('*').limit(24)
+  let request = supabase.from('profiles').select(PROFILE_COLUMNS).limit(24)
 
   if (excludeUserId) {
     request = request.neq('id', excludeUserId)
@@ -179,7 +183,7 @@ export async function updateMyProfile(
   await updateProfileRecord(userId, {
     name: sanitizeUserText(updates.name, 80),
     breed: sanitizeUserText(updates.breed, 80),
-    age: updates.age,
+    age: clampAge(updates.age),
     bio: sanitizeUserText(updates.bio, 500),
     ...(avatar_url ? { avatar_url } : {}),
     ...(username ? { username } : {}),
@@ -243,7 +247,7 @@ export async function fetchSuggestedCats(
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select(PROFILE_COLUMNS)
     .neq('id', currentUserId)
     .order('created_at', { ascending: false })
     .limit(12)
