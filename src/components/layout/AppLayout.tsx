@@ -5,6 +5,7 @@ import { BottomTabs } from '@/components/layout/BottomTabs'
 import { TreatCatcherModal } from '@/components/game/TreatCatcherModal'
 import { NotificationsDrawer } from '@/components/notifications/NotificationsDrawer'
 import { RealtimeAlerts } from '@/components/realtime/RealtimeAlerts'
+import { DesktopNotificationPrompt } from '@/components/notifications/DesktopNotificationPrompt'
 import { AuthGateModal } from '@/components/auth/AuthGateModal'
 import { useApp } from '@/context/AppContext'
 
@@ -17,6 +18,7 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <main className="flex-1 px-3 py-4 pb-24 sm:px-5 sm:py-6 lg:pb-6">
+          <DesktopNotificationPrompt />
           <Outlet />
         </main>
         <BottomTabs />

@@ -152,10 +152,12 @@ export async function sendMessage(
 
   const message = mapMessage(data as DbMessage)
 
+  // The server replaces this preview with the stored message text.
   await createNotification({
     userId: receiverId,
     actorId: senderId,
     type: 'message',
+    body: content.slice(0, 160),
   })
 
   return message
@@ -169,7 +171,7 @@ export function subscribeToMessages(
   const supabase = requireSupabase()
 
   const channel = supabase
-    .channel(`dm-thread:${currentUserId}:${peerId}`)
+    .channel(`dm-thread:${currentUserId}:${peerId}:${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       {

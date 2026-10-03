@@ -19,6 +19,7 @@
 --        Artık yalnızca JPEG, PNG, WebP, GIF, HEIC/HEIF, AVIF.
 --   S-08 Kullanılmayan create_conversation_with() fonksiyonu kapatıldı.
 --   S-09 Yaş için üst sınır (0–40).
+--   R-01 Bildirim ve mesaj tabloları canlı (Realtime) yayına ekli olmalı.
 -- =====================================================================
 
 
@@ -151,6 +152,22 @@ begin
   if to_regprocedure('public.create_conversation_with(uuid)') is not null then
     revoke execute on function public.create_conversation_with(uuid) from public, anon, authenticated;
   end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Canlı bildirimler: notifications ve messages tabloları Realtime
+-- yayınında olmalı (zaten ekliyse hata vermeden geçer).
+-- ---------------------------------------------------------------------
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['notifications', 'messages'] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
 end $$;
 
 notify pgrst, 'reload schema';

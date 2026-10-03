@@ -38,6 +38,11 @@ export const translations = {
       followed: 'started following you',
       messaged: 'sent you a direct message:',
       toastMessage: 'New message from',
+      desktopPrompt: 'Get a notification on your computer when someone messages you or likes your post.',
+      desktopEnable: 'Turn on',
+      desktopLater: 'Not now',
+      desktopOn: 'Computer notifications are on.',
+      desktopBlocked: 'Notifications are blocked. Click the lock icon next to the address bar and allow notifications.',
     },
     economy: {
       coins: 'Coins',
@@ -265,6 +270,11 @@ export const translations = {
       followed: 'seni takip etmeye başladı',
       messaged: 'sana mesaj gönderdi:',
       toastMessage: 'Yeni mesaj:',
+      desktopPrompt: 'Biri sana mesaj attığında ya da gönderini beğendiğinde bilgisayarında bildirim al.',
+      desktopEnable: 'Aç',
+      desktopLater: 'Şimdi değil',
+      desktopOn: 'Bilgisayar bildirimleri açık.',
+      desktopBlocked: 'Bildirimler engellenmiş. Adres çubuğunun yanındaki kilit simgesine tıklayıp bildirimlere izin ver.',
     },
     economy: {
       coins: 'Coin',

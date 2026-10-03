@@ -366,13 +366,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [activeConversationId, currentUser])
 
-  // Live chat thread for the open peer DM
+  // Live chat thread for the open peer DM (keyed on ids, not the profile
+  // object, so profile refreshes don't drop and re-create the channel)
   useEffect(() => {
-    if (!currentUser || !activeConversationId || !isSupabaseConfigured) return
+    if (!signedInUserId || !activeConversationId || !isSupabaseConfigured) return
 
     return api.subscribeToMessages(
       activeConversationId,
-      currentUser.id,
+      signedInUserId,
       (message: Message) => {
         setConversations((prev) =>
           prev.map((chat) => {
@@ -388,22 +389,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
       },
     )
-  }, [activeConversationId, currentUser])
+  }, [activeConversationId, signedInUserId])
 
   // Keep DM inbox previews in sync for all peers
+  const refreshChatsRef = useRef(refreshChats)
+  refreshChatsRef.current = refreshChats
   useEffect(() => {
-    if (!currentUser || !isSupabaseConfigured) return
+    if (!signedInUserId || !isSupabaseConfigured) return
+    const myId = signedInUserId
 
-    return api.subscribeToAllMessages(currentUser.id, (message) => {
+    return api.subscribeToAllMessages(myId, (message) => {
       const peerId =
-        message.senderId === currentUser.id
+        message.senderId === myId
           ? message.receiverId
           : message.senderId
 
       setConversations((prev) => {
         const exists = prev.some((chat) => chat.id === peerId)
         if (!exists) {
-          void refreshChats({ silent: true })
+          void refreshChatsRef.current({ silent: true })
           return prev
         }
 
@@ -424,7 +428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           )
       })
     })
-  }, [currentUser, refreshChats])
+  }, [signedInUserId])
 
   const signUp = useCallback(async (input: api.SignUpInput) => {
     // Never auto-login after signup — email must be verified first.

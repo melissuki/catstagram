@@ -7,6 +7,7 @@ import { Avatar } from '@/components/common/Avatar'
 import { formatRelativeTime } from '@/utils/relativeTime'
 import { profilePath } from '@/utils/username'
 import type { AppNotification } from '@/types'
+import { DesktopNotificationPrompt } from '@/components/notifications/DesktopNotificationPrompt'
 
 function actionLine(
   item: AppNotification,
@@ -104,6 +105,10 @@ export function NotificationsDrawer() {
             <X className="h-4 w-4" />
           </button>
         </header>
+
+        <div className="pt-3">
+          <DesktopNotificationPrompt variant="row" />
+        </div>
 
         <ul className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           {notifications.length === 0 ? (

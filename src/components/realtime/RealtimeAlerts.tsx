@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import * as api from '@/services/api'
 import { isSupabaseConfigured } from '@/services/supabaseClient'
 import type { AppNotification } from '@/types'
+import { showDesktopNotification } from '@/utils/desktopNotifications'
 
 function toastCopy(item: AppNotification, t: ReturnType<typeof useTranslation>['t']) {
   const handle = `@${item.actorUsername}`
@@ -38,67 +39,83 @@ export function RealtimeAlerts() {
     refreshChats,
     startChatWith,
     closeNotifications,
-    language,
   } = useApp()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const seenToastIds = useRef(new Set<string>())
-  const tRef = useRef(t)
-  tRef.current = t
+  const userId = currentUser?.id ?? null
+
+  // Latest callbacks in a ref: the subscriptions below depend only on the
+  // user id, so profile refreshes (coins, streaks) don't tear them down.
+  const live = useRef({ t, refreshNotifications, refreshChats, startChatWith, closeNotifications, navigate })
+  live.current = { t, refreshNotifications, refreshChats, startChatWith, closeNotifications, navigate }
 
   useEffect(() => {
-    if (!currentUser || !isSupabaseConfigured) return
+    if (!userId || !isSupabaseConfigured) return
 
-    const openFromNotification = async (item: AppNotification) => {
-      closeNotifications()
-      if (item.type === 'message') {
-        await startChatWith(item.actorId)
-        navigate('/messages')
-        return
-      }
-      navigate(`/profile/${item.actorId}`)
-    }
-
-    const showToast = (item: AppNotification) => {
-      if (seenToastIds.current.has(item.id)) return
-      seenToastIds.current.add(item.id)
+    const markSeen = (id: string) => {
+      if (seenToastIds.current.has(id)) return false
+      seenToastIds.current.add(id)
       if (seenToastIds.current.size > 80) {
         const first = seenToastIds.current.values().next().value as string
         seenToastIds.current.delete(first)
       }
+      return true
+    }
 
-      toast.info(toastCopy(item, tRef.current), {
-        toastId: item.id,
+    const openChat = async (peerId: string) => {
+      live.current.closeNotifications()
+      await live.current.startChatWith(peerId)
+      live.current.navigate('/messages')
+    }
+
+    const openFromNotification = async (item: AppNotification) => {
+      if (item.type === 'message') {
+        await openChat(item.actorId)
+        return
+      }
+      live.current.closeNotifications()
+      live.current.navigate(`/profile/${item.actorId}`)
+    }
+
+    const alert = (id: string, text: string, onClick: () => void) => {
+      if (!markSeen(id)) return
+      toast.info(text, {
+        toastId: id,
         position: 'top-right',
         autoClose: 5000,
-        onClick: () => {
-          void openFromNotification(item)
-        },
+        onClick,
       })
+      // Also show it in the computer's notification area when the tab
+      // is in the background (needs the user's permission).
+      showDesktopNotification({ title: 'Catstagram', body: text, tag: id, onClick })
     }
 
     const unsubNotifications = api.subscribeToNotifications(
-      currentUser.id,
+      userId,
       () => {
-        void refreshNotifications()
+        void live.current.refreshNotifications()
       },
       (notificationId) => {
         void api.fetchNotificationById(notificationId).then((item) => {
-          if (item) showToast(item)
+          if (item) {
+            alert(item.id, toastCopy(item, live.current.t), () => {
+              void openFromNotification(item)
+            })
+          }
         })
       },
     )
 
-    // Message-channel fallback: toast if a peer DM arrives even when
-    // notification insert is unavailable (migration not applied yet).
-    const unsubMessages = api.subscribeToAllMessages(currentUser.id, (message) => {
-      if (message.senderId === currentUser.id) return
-      void refreshChats({ silent: true })
+    // Message-channel fallback: alert if a peer DM arrives but no matching
+    // notification row shows up (e.g. the notification insert failed).
+    const unsubMessages = api.subscribeToAllMessages(userId, (message) => {
+      if (message.senderId === userId) return
+      void live.current.refreshChats({ silent: true })
 
       void (async () => {
-        // Avoid double toast when a message notification also arrives.
-        await new Promise((r) => window.setTimeout(r, 400))
-        const recent = await api.fetchNotifications(currentUser.id)
+        await new Promise((r) => window.setTimeout(r, 1500))
+        const recent = await api.fetchNotifications(userId)
         const matched = recent.find(
           (n) =>
             n.type === 'message' &&
@@ -106,30 +123,26 @@ export function RealtimeAlerts() {
             Math.abs(
               new Date(n.createdAt).getTime() -
                 new Date(message.createdAt).getTime(),
-            ) < 5000,
+            ) < 10000,
         )
-        if (matched) return
+        if (matched) {
+          // Realtime for notifications may have been missed; alert once.
+          alert(matched.id, toastCopy(matched, live.current.t), () => {
+            void openChat(message.senderId)
+          })
+          return
+        }
 
         const username = await api.fetchActorUsername(message.senderId)
-        const fallbackId = `msg-${message.id}`
-        if (seenToastIds.current.has(fallbackId)) return
-        seenToastIds.current.add(fallbackId)
-
         const preview = message.text.slice(0, 80)
-        toast.info(
-          `💬 ${tRef.current.notifications.toastMessage} @${username}: ${preview}`,
-          {
-            toastId: fallbackId,
-            position: 'top-right',
-            autoClose: 5000,
-            onClick: () => {
-              void startChatWith(message.senderId).then(() =>
-                navigate('/messages'),
-              )
-            },
+        alert(
+          `msg-${message.id}`,
+          `💬 ${live.current.t.notifications.toastMessage} @${username}: ${preview}`,
+          () => {
+            void openChat(message.senderId)
           },
         )
-        void refreshNotifications()
+        void live.current.refreshNotifications()
       })()
     })
 
@@ -137,15 +150,7 @@ export function RealtimeAlerts() {
       unsubNotifications()
       unsubMessages()
     }
-  }, [
-    currentUser,
-    refreshNotifications,
-    refreshChats,
-    startChatWith,
-    closeNotifications,
-    navigate,
-    language,
-  ])
+  }, [userId])
 
   return null
 }
