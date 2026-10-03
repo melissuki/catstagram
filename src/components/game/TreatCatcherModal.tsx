@@ -24,7 +24,13 @@ interface TreatCatcherModalProps {
 }
 
 export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
-  const { currentUser, submitGameScore } = useApp()
+  const { currentUser, startGame, submitGameScore } = useApp()
+  // Server-side session for this round (score is only accepted with it)
+  const sessionRef = useRef<string | null>(null)
+  // Each round is submitted exactly once (the submit callback changes when
+  // the profile refreshes, which would otherwise re-run the effect).
+  const submittedRef = useRef(true)
+  const [starting, setStarting] = useState(false)
   const { t } = useTranslation()
   const [phase, setPhase] = useState<'idle' | 'playing' | 'done'>('idle')
   const [score, setScore] = useState(0)
@@ -64,10 +70,12 @@ export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
   }, [phase])
 
   useEffect(() => {
-    if (phase !== 'done') return
+    if (phase !== 'done' || submittedRef.current) return
+    submittedRef.current = true
     void (async () => {
       try {
-        const result = await submitGameScore(scoreRef.current)
+        const result = await submitGameScore(sessionRef.current, scoreRef.current)
+        sessionRef.current = null
         if (result.isNewHigh) {
           toast.success(t.game.newHighScore)
         }
@@ -124,7 +132,19 @@ export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
     })
   }
 
-  const start = () => {
+  const start = async () => {
+    if (starting) return
+    setStarting(true)
+    try {
+      sessionRef.current = await startGame()
+    } catch (error) {
+      console.error('[game] could not start session', error)
+      toast.error(t.game.saveFailed)
+      return
+    } finally {
+      setStarting(false)
+    }
+    submittedRef.current = false
     scoreRef.current = 0
     setScore(0)
     setTimeLeft(GAME_SECONDS)
@@ -184,7 +204,7 @@ export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
               <p className="max-w-xs text-sm text-slate-600 dark:text-slate-300">
                 {t.game.howto}
               </p>
-              <button type="button" onClick={start} className="btn-primary">
+              <button type="button" onClick={() => void start()} disabled={starting} className="btn-primary">
                 <Gamepad2 className="h-4 w-4" />
                 {t.game.play}
               </button>
@@ -218,7 +238,7 @@ export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
                 {t.game.best}: {Math.max(currentUser.gameHighScore, score)}
               </p>
               <div className="mt-2 flex gap-2">
-                <button type="button" onClick={start} className="btn-primary-sm">
+                <button type="button" onClick={() => void start()} disabled={starting} className="btn-primary-sm">
                   {t.game.playAgain}
                 </button>
                 <button type="button" onClick={onClose} className="btn-soft">

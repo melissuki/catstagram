@@ -189,27 +189,39 @@ export async function updateMyProfile(
 }
 
 /**
- * Persist Treat Catcher high score for the authenticated user only.
- * Güvenlik (VULN-02): Skor artık doğrudan tabloya yazılmaz. Sunucudaki
- * SECURITY DEFINER fonksiyonu `update_game_high_score` çağrılır; fonksiyon
- * skoru doğrular (negatif/üst sınır kontrolü) ve yalnızca mevcut rekorun
- * üzerindeyse günceller. İstemciden 999999 gibi keyfi bir değer PATCH ile
- * yazılamaz.
+ * Starts a Treat Catcher round on the server. Returns null when the server
+ * doesn't have game sessions yet (security_hardening_v2.sql not applied).
  */
-export async function updateGameHighScore(
+export async function startTreatGame(): Promise<string | null> {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc('start_treat_game')
+  if (error) {
+    if (error.code === 'PGRST202') return null
+    throw new Error(error.message)
+  }
+  return data as string
+}
+
+/**
+ * Saves a finished round. Güvenlik: skor yalnızca sunucuda başlatılmış, en az
+ * 29 sn sürmüş bir oturumla ve oyunda ulaşılabilir tavan (450) içinde
+ * kabul edilir; her oturum tek bir kez gönderilebilir.
+ */
+export async function submitTreatGame(
   userId: string,
+  sessionId: string | null,
   score: number,
 ): Promise<{ profile: CatProfile; isNewHigh: boolean }> {
   const supabase = requireSupabase()
   const previous = await fetchProfileById(userId)
 
-  const { data, error } = await supabase.rpc('update_game_high_score', {
-    new_score: score,
-  })
+  const { error } = sessionId
+    ? await supabase.rpc('finish_treat_game', { p_session: sessionId, p_score: score })
+    : await supabase.rpc('update_game_high_score', { new_score: score })
   if (error) throw new Error(error.message)
 
   const profile = await fetchProfileById(userId)
-  const isNewHigh = (data as number) > previous.gameHighScore
+  const isNewHigh = profile.gameHighScore > previous.gameHighScore
   return { profile, isNewHigh }
 }
 

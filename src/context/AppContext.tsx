@@ -85,7 +85,12 @@ interface AppContextValue {
   gameOpen: boolean
   openGame: () => void
   closeGame: () => void
-  submitGameScore: (score: number) => Promise<{ isNewHigh: boolean }>
+  /** Starts a server-side game session; null if the server has none yet. */
+  startGame: () => Promise<string | null>
+  submitGameScore: (
+    sessionId: string | null,
+    score: number,
+  ) => Promise<{ isNewHigh: boolean }>
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -711,11 +716,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [requireAuth])
   const closeGame = useCallback(() => setGameOpen(false), [])
 
+  const startGame = useCallback(() => api.startTreatGame(), [])
+
   const submitGameScore = useCallback(
-    async (score: number) => {
+    async (sessionId: string | null, score: number) => {
       if (!currentUser) return { isNewHigh: false }
-      const { profile, isNewHigh } = await api.updateGameHighScore(
+      const { profile, isNewHigh } = await api.submitTreatGame(
         currentUser.id,
+        sessionId,
         score,
       )
       setCurrentUser(profile)
@@ -778,6 +786,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       gameOpen,
       openGame,
       closeGame,
+      startGame,
       submitGameScore,
     }),
     [
@@ -825,6 +834,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       gameOpen,
       openGame,
       closeGame,
+      startGame,
       submitGameScore,
     ],
   )

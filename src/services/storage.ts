@@ -5,15 +5,19 @@ export const STORAGE_BUCKET = 'cat-photos' as const
 
 type UploadFolder = 'public' | 'stories'
 
-function buildFilePath(file: File, folder: UploadFolder): string {
+/** Mirrors the bucket's file_size_limit in security_hardening_v2.sql. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+function buildFilePath(file: File, folder: UploadFolder, userId: string): string {
   const cleanExtension = (file.name.split('.').pop() || 'jpg')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
 
-  const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${cleanExtension || 'jpg'}`
+  const uniqueFileName = `${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${cleanExtension || 'jpg'}`
 
-  // Explicit folder prefix — NO leading slash '/'
-  return `${folder}/${uniqueFileName}`
+  // <folder>/<user id>/<file>: storage policies only let the owner of the
+  // user-id folder delete files in it. No leading slash.
+  return `${folder}/${userId}/${uniqueFileName}`
 }
 
 async function uploadToCatPhotos(
@@ -21,11 +25,17 @@ async function uploadToCatPhotos(
   folder: UploadFolder = 'public',
 ): Promise<string> {
   const supabase = requireSupabase()
-  const filePath = buildFilePath(file, folder)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
 
-  console.log('CRITICAL UPLOAD PATH:', filePath)
+  if (!file.type.startsWith('image/')) throw new Error('Only images can be uploaded')
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error('Image is too large (max 10 MB)')
 
-  const { data, error } = await supabase.storage
+  const filePath = buildFilePath(file, folder, user.id)
+
+  const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
     .upload(filePath, file, {
       cacheControl: '3600',
@@ -33,7 +43,7 @@ async function uploadToCatPhotos(
     })
 
   if (error) {
-    console.error('CRITICAL UPLOAD ERROR:', error, { filePath, data })
+    console.error('[storage] upload failed', error)
     throw new Error(error.message)
   }
 
