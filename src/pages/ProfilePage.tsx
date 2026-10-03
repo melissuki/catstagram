@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Gamepad2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CalendarCheck, Coins, Flame, Gamepad2, ShoppingBag, Sparkles } from 'lucide-react'
 import { toast } from 'react-toastify'
 import type { Post } from '@/types'
 import { fetchUserPosts } from '@/services/api'
@@ -8,6 +9,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { Avatar } from '@/components/common/Avatar'
 import { ImageUpload } from '@/components/common/ImageUpload'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { CatCharacter } from '@/components/character/CatCharacter'
 
 export function ProfilePage() {
   const { currentUser, updateProfile, followingIds, openGame } = useApp()
@@ -133,6 +135,24 @@ export function ProfilePage() {
                 value={currentUser.following || followingIds.length}
               />
               <div className="flex items-center gap-1.5">
+                <Coins className="h-4 w-4 text-amber-500" />
+                <Stat label={t.economy.coins} value={currentUser.coins} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <Stat
+                  label={t.economy.streak}
+                  value={currentUser.postStreak}
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CalendarCheck className="h-4 w-4 text-sky-500" />
+                <Stat
+                  label={t.economy.loginStreak}
+                  value={currentUser.loginStreak}
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
                 <Gamepad2 className="h-4 w-4 text-pink-500" />
                 <Stat
                   label={t.game.highScore}
@@ -248,6 +268,33 @@ export function ProfilePage() {
             </button>
           </form>
         ) : null}
+      </section>
+
+      <section className="card-panel animate-fade-up flex items-center gap-4 p-4 sm:p-5">
+        <Link
+          to="/character"
+          className="block h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-sm transition duration-300 hover:-translate-y-0.5"
+        >
+          <CatCharacter config={currentUser.avatarConfig} className="h-full w-full" title={currentUser.name} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <p className="font-brand text-base font-bold text-slate-700 dark:text-slate-100">
+            {t.character.cardTitle}
+          </p>
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+            {t.character.cardSubtitle}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Link to="/character" className="btn-primary-sm">
+            <Sparkles className="h-4 w-4" />
+            {t.character.editCta}
+          </Link>
+          <Link to="/market" className="btn-soft py-1.5 text-xs">
+            <ShoppingBag className="h-4 w-4" />
+            {t.nav.market}
+          </Link>
+        </div>
       </section>
 
       <section className="animate-fade-up">

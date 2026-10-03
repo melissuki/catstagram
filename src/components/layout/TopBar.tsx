@@ -12,7 +12,7 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-purple-100/40 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-xl dark:border-purple-500/20 dark:bg-slate-950/70 lg:hidden">
       <div className="flex min-w-0 items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-300/50 via-pink-300/40 to-orange-300/40 text-purple-600 shadow-sm dark:text-pink-300">
+        <div className="hover-wiggle flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-300/50 via-pink-300/40 to-orange-300/40 text-purple-600 shadow-sm dark:text-pink-300">
           <Cat className="h-5 w-5" />
         </div>
         <h1 className="font-brand truncate text-lg font-bold text-slate-700 dark:text-slate-100">

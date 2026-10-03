@@ -162,17 +162,17 @@ export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
-          <span>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 text-[10px] font-semibold text-slate-600 sm:text-xs dark:text-slate-300">
+          <span className="font-pixel">
             {t.game.score}:{' '}
             <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
               {score}
             </span>
           </span>
-          <span>
+          <span className="font-pixel">
             {t.game.time}: {timeLeft}s
           </span>
-          <span>
+          <span className="font-pixel">
             {t.game.best}: {currentUser.gameHighScore}
           </span>
         </div>
@@ -211,10 +211,10 @@ export function TreatCatcherModal({ open, onClose }: TreatCatcherModalProps) {
               <p className="font-brand text-2xl font-bold text-slate-700 dark:text-slate-100">
                 {t.game.gameOver}
               </p>
-              <p className="text-lg font-semibold text-pink-500">
+              <p className="font-pixel text-sm text-pink-500">
                 {t.game.score}: {score}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="font-pixel text-[10px] text-slate-500 dark:text-slate-400">
                 {t.game.best}: {Math.max(currentUser.gameHighScore, score)}
               </p>
               <div className="mt-2 flex gap-2">

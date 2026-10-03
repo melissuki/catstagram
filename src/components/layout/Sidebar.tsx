@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import {
   Cat,
-  Gamepad2,
+  Shirt,
+  ShoppingBag,
   LogOut,
   MessageCircle,
   Home,
@@ -23,13 +24,13 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 export function Sidebar() {
-  const { currentUser, logout, openGame, openAuthModal, requireAuth } = useApp()
+  const { currentUser, logout, openAuthModal, requireAuth } = useApp()
   const { t } = useTranslation()
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-purple-100/40 bg-white/55 px-4 py-6 backdrop-blur-xl dark:border-purple-500/20 dark:bg-slate-950/40 lg:flex xl:w-72">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-300/40 via-pink-300/40 to-orange-300/40 text-purple-600 shadow-sm dark:text-pink-300">
+        <div className="hover-wiggle flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-300/40 via-pink-300/40 to-orange-300/40 text-purple-600 shadow-sm dark:text-pink-300">
           <Cat className="h-6 w-6" />
         </div>
         <div>
@@ -52,14 +53,26 @@ export function Sidebar() {
           {t.nav.search}
         </NavLink>
         <NavNotificationsButton variant="sidebar" />
-        <button
-          type="button"
-          onClick={openGame}
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-500 transition duration-300 hover:bg-gradient-to-r hover:from-purple-50/80 hover:via-pink-50/80 hover:to-orange-50/80 hover:text-slate-700 dark:text-slate-400 dark:hover:from-purple-950/40 dark:hover:via-pink-950/30 dark:hover:to-orange-950/20 dark:hover:text-slate-100"
+        <NavLink
+          to="/character"
+          className={linkClass}
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
         >
-          <Gamepad2 className="h-5 w-5 text-pink-500" />
-          {t.game.play}
-        </button>
+          <Shirt className="h-5 w-5" />
+          {t.nav.character}
+        </NavLink>
+        <NavLink
+          to="/market"
+          className={linkClass}
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
+        >
+          <ShoppingBag className="h-5 w-5" />
+          {t.nav.market}
+        </NavLink>
         <NavLink
           to="/messages"
           className={linkClass}

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Gamepad2, Home, Search, UserRound } from 'lucide-react'
+import { Home, Search, Shirt, UserRound } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { NavNotificationsButton } from '@/components/notifications/NavNotificationsButton'
@@ -13,7 +13,7 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
 
 export function BottomTabs() {
   const { t } = useTranslation()
-  const { openGame, requireAuth } = useApp()
+  const { requireAuth } = useApp()
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-purple-100/40 bg-white/85 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-sm backdrop-blur-xl dark:border-purple-500/20 dark:bg-slate-950/85 lg:hidden">
@@ -27,14 +27,16 @@ export function BottomTabs() {
           {t.nav.search}
         </NavLink>
         <NavNotificationsButton variant="tab" />
-        <button
-          type="button"
-          onClick={openGame}
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-semibold text-pink-500 transition duration-300"
+        <NavLink
+          to="/character"
+          className={tabClass}
+          onClick={(event) => {
+            if (!requireAuth()) event.preventDefault()
+          }}
         >
-          <Gamepad2 className="h-5 w-5" />
-          {t.nav.play}
-        </button>
+          <Shirt className="h-5 w-5" />
+          {t.nav.character}
+        </NavLink>
         <NavLink
           to="/profile"
           className={tabClass}

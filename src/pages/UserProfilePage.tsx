@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Gamepad2 } from 'lucide-react'
+import { Flame, Gamepad2 } from 'lucide-react'
 import type { CatProfile, Post } from '@/types'
 import { fetchProfileById, fetchUserPosts } from '@/services/api'
 import { useApp } from '@/context/AppContext'
 import { useTranslation } from '@/hooks/useTranslation'
 import { Avatar } from '@/components/common/Avatar'
+import { CatCharacter } from '@/components/character/CatCharacter'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 
 /**
@@ -85,7 +86,19 @@ export function UserProfilePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <section className="card-panel animate-fade-up p-5 sm:p-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-          <Avatar src={profile.avatar} alt={profile.name} size="xl" ring />
+          <div className="flex shrink-0 items-end gap-3">
+            <Avatar src={profile.avatar} alt={profile.name} size="xl" ring />
+            <div
+              className="h-20 w-20 overflow-hidden rounded-2xl shadow-sm"
+              title={t.character.profileTitle}
+            >
+              <CatCharacter
+                config={profile.avatarConfig}
+                className="h-full w-full"
+                title={t.character.profileTitle}
+              />
+            </div>
+          </div>
           <div className="flex-1 text-center sm:text-left">
             <h2 className="font-brand text-2xl font-bold text-slate-700 dark:text-slate-100">
               {profile.name}
@@ -107,6 +120,10 @@ export function UserProfilePage() {
               />
               <Stat label={t.profile.followers} value={profile.followers} />
               <Stat label={t.profile.following} value={profile.following} />
+              <div className="flex items-center gap-1.5">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <Stat label={t.economy.streak} value={profile.postStreak} />
+              </div>
               <div className="flex items-center gap-1.5">
                 <Gamepad2 className="h-4 w-4 text-pink-500" />
                 <Stat label={t.game.highScore} value={profile.gameHighScore} />

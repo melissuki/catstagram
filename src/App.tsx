@@ -8,6 +8,8 @@ import { AuthPage } from '@/pages/AuthPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { HomePage } from '@/pages/HomePage'
 import { ProfilePage } from '@/pages/ProfilePage'
+import { CharacterPage } from '@/pages/CharacterPage'
+import { MarketPage } from '@/pages/MarketPage'
 import { UserProfilePage } from '@/pages/UserProfilePage'
 import { UsernameRedirectPage } from '@/pages/UsernameRedirectPage'
 import { SearchPage } from '@/pages/SearchPage'
@@ -36,6 +38,13 @@ export default function App() {
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/character" element={<CharacterPage />} />
+                <Route path="/market" element={<MarketPage />} />
+                {/* Old game routes from the map/room version */}
+                <Route path="/avatar" element={<Navigate to="/character" replace />} />
+                <Route path="/room" element={<Navigate to="/character" replace />} />
+                <Route path="/world" element={<Navigate to="/character" replace />} />
+                <Route path="/shop" element={<Navigate to="/market" replace />} />
                 <Route path="/messages" element={<MessagesPage />} />
               </Route>
             </Route>

@@ -12,8 +12,24 @@ export interface DbProfile {
   food_streak: number
   last_fed_date: string | null
   game_high_score: number
+  coins: number
+  post_streak_count: number
+  post_streak_last_date: string | null
+  login_streak_count: number
+  login_streak_last_date: string | null
+  avatar_config: unknown
   created_at: string
   updated_at: string
+}
+
+export interface DbDailyReward {
+  id: string
+  user_id: string
+  reward_date: string
+  streak_day: number
+  coins_awarded: number
+  post_id: string | null
+  created_at: string
 }
 
 export interface DbNotification {
@@ -70,4 +86,21 @@ export interface DbMessage {
 export interface DbConversationMember {
   conversation_id: string
   user_id: string
+}
+
+export interface DbShopItem {
+  id: string
+  key: string
+  category: string
+  price: number
+  sprite_key: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface DbInventoryItem {
+  id: string
+  user_id: string
+  item_id: string
+  acquired_at: string
 }

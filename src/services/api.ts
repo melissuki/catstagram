@@ -50,6 +50,16 @@ export {
   addComment,
 } from '@/services/posts'
 
+export { fetchPostReward, type PostReward } from '@/services/economy'
+
+export {
+  fetchShopItems,
+  fetchMyInventory,
+  purchaseItem,
+  equipCharacter,
+  claimDailyLogin,
+} from '@/services/shop'
+
 export {
   fetchStories,
   createStory,

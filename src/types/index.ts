@@ -1,3 +1,5 @@
+import type { AvatarConfig } from '@/types/avatar'
+
 export type Language = 'en' | 'tr'
 
 export type NotificationType = 'like' | 'comment' | 'follow' | 'message'
@@ -14,6 +16,10 @@ export interface CatProfile {
   following: number
   postsCount: number
   gameHighScore: number
+  coins: number
+  postStreak: number
+  loginStreak: number
+  avatarConfig: AvatarConfig
 }
 
 export interface Comment {

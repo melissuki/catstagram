@@ -108,12 +108,20 @@ If you already ran an older schema, run these in the Supabase SQL Editor as need
 - [`supabase/migrations/add_game_and_notifications.sql`](./supabase/migrations/add_game_and_notifications.sql) — `game_high_score` + `notifications` table/triggers
 - [`supabase/migrations/add_message_notifications.sql`](./supabase/migrations/add_message_notifications.sql) — DM notification type + preview `body`
 - [`supabase/migrations/fix_notifications_user_id.sql`](./supabase/migrations/fix_notifications_user_id.sql) — **required** rename `recipient_id` → `user_id` + RLS (fixes empty notification panel)
+- [`supabase/migrations/character_shop_and_daily_login.sql`](./supabase/migrations/character_shop_and_daily_login.sql) — **required for coins + cat character.** Self-contained and safe to re-run: coin wallet, post streak and daily login streak, the character market catalog, inventory, and the `purchase_item()` / `equip_character()` / `claim_daily_login()` RPCs. If you ran the older map/room migrations, it also closes client access to those tables.
+- `add_economy.sql`, `add_avatar_config.sql`, `add_shop_and_rooms.sql` — older steps of the same feature. Not needed on a fresh project; the file above covers them.
+
+The old multiplayer map / room version (Phaser game, assets, and its migrations) is kept in [`archive/world-game/`](./archive/world-game/) and is not part of the build.
 
 Stories upload to the public `cat-photos` bucket under the `stories/` prefix (same bucket policies as other uploads).
 
 **Profile isolation:** own settings live at `/profile`; other cats at `/profile/:userId` (legacy `/u/:username` redirects).
 
 **Treat Catcher:** 30s mini-game from the navbar / profile; high score stored on `profiles.game_high_score`.
+
+**Coins:** opening the app once a day (`claim_daily_login()`) and the first post of each day (a `posts` insert trigger) award coins, with bonuses for login and post streaks. Everything is computed server-side; the client can never write `coins` or streak columns.
+
+**Cat character:** design your cat at `/character` (fur, eyes, hat, glasses, neck, background) and buy new items at `/market`. The character is drawn as SVG, so no image assets are needed. Purchases and equipped items are verified server-side, so you can only wear items you own or free ones.
 
 **Notifications:** DB triggers create like/comment/follow rows (no self-actions); heart badge in the header marks them read when opened.
 

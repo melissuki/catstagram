@@ -6,6 +6,7 @@ import type {
   Message,
   Post,
 } from '@/types'
+import { resolveAvatarConfig } from '@/types/avatar'
 import type {
   DbComment,
   DbMessage,
@@ -14,6 +15,21 @@ import type {
   DbProfile,
 } from '@/types/database'
 import { resolveUsername } from '@/utils/username'
+
+/**
+ * The DB keeps the last streak count until the next post, so a streak broken
+ * days ago would still show its old value. Days are UTC to match the server's
+ * `current_date` in award_post_reward().
+ */
+function effectiveStreak(count: number, lastDate: string | null): number {
+  if (!lastDate || count <= 0) return 0
+  const last = Date.parse(`${lastDate}T00:00:00Z`)
+  if (Number.isNaN(last)) return 0
+  const now = new Date()
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const daysSince = Math.round((todayUtc - last) / 86_400_000)
+  return daysSince <= 1 ? count : 0
+}
 
 export function mapProfile(
   profile: DbProfile,
@@ -31,6 +47,16 @@ export function mapProfile(
     following: counts.following ?? 0,
     postsCount: counts.postsCount ?? 0,
     gameHighScore: profile.game_high_score ?? 0,
+    coins: profile.coins ?? 0,
+    postStreak: effectiveStreak(
+      profile.post_streak_count ?? 0,
+      profile.post_streak_last_date ?? null,
+    ),
+    loginStreak: effectiveStreak(
+      profile.login_streak_count ?? 0,
+      profile.login_streak_last_date ?? null,
+    ),
+    avatarConfig: resolveAvatarConfig(profile.avatar_config),
   }
 }
 

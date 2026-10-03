@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -16,6 +17,7 @@ import type {
   Post,
   Story,
 } from '@/types'
+import type { AvatarConfig } from '@/types/avatar'
 import { toast } from 'react-toastify'
 import { isSupabaseConfigured, requireSupabase } from '@/services/supabaseClient'
 import * as api from '@/services/api'
@@ -49,6 +51,10 @@ interface AppContextValue {
     username?: string
     avatarFile?: File | null
   }) => Promise<void>
+  /** Saves equipped character items (ownership is verified server-side). */
+  equipCharacter: (config: AvatarConfig) => Promise<void>
+  /** Re-reads the signed-in profile (e.g. after a server-side coin change). */
+  refreshCurrentUser: () => Promise<void>
   posts: Post[]
   stories: Story[]
   feedLoading: boolean
@@ -85,6 +91,9 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null)
 
 const LANGUAGE_STORAGE_KEY = 'catstagram_language'
+
+/** Mirrors the milestone streak days in supabase/migrations/add_economy.sql. */
+const MILESTONE_STREAK_DAYS = new Set([3, 7, 14, 30, 60, 100])
 
 function loadLanguage(): Language {
   const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY)
@@ -272,6 +281,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [authReady, currentUser, refreshFeed, refreshChats, refreshNotifications])
 
+  // Daily login reward: the server grants coins once per (UTC) day; we only
+  // ask once per user per day per tab, and again when the tab regains focus
+  // on a new day.
+  const loginClaimKeyRef = useRef<string | null>(null)
+  const signedInUserId = currentUser?.id ?? null
+  useEffect(() => {
+    if (!authReady || !isSupabaseConfigured || !signedInUserId) return
+    const userId = signedInUserId
+
+    const claim = () => {
+      const key = `${userId}:${new Date().toISOString().slice(0, 10)}`
+      if (loginClaimKeyRef.current === key) return
+      loginClaimKeyRef.current = key
+      void api
+        .claimDailyLogin()
+        .then((result) => {
+          if (!result.awarded) return
+          setCurrentUser((prev) =>
+            prev && prev.id === userId
+              ? { ...prev, coins: result.coins, loginStreak: result.streakDay }
+              : prev,
+          )
+          const t = getTranslations(language)
+          toast.success(
+            t.economy.dailyLogin
+              .replace('{coins}', String(result.coinsAwarded))
+              .replace('{streak}', String(result.streakDay)),
+            { toastId: `daily-login-${key}` },
+          )
+        })
+        .catch((error) => {
+          // Migration not applied yet, offline, etc. Try again next focus.
+          loginClaimKeyRef.current = null
+          console.warn('[economy] daily login claim failed', error)
+        })
+    }
+
+    claim()
+    window.addEventListener('focus', claim)
+    return () => window.removeEventListener('focus', claim)
+  }, [authReady, signedInUserId, language])
+
   // Notification realtime is handled by RealtimeAlerts (toast + refresh).
 
   // Live global feed: posts / likes / comments via supabase.channel()
@@ -421,6 +472,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [currentUser],
   )
 
+  const equipCharacter = useCallback(
+    async (config: AvatarConfig) => {
+      if (!currentUser) return
+      await api.equipCharacter(config)
+      const next = await api.fetchProfileById(currentUser.id)
+      setCurrentUser(next)
+    },
+    [currentUser],
+  )
+
+  const refreshCurrentUser = useCallback(async () => {
+    if (!currentUser) return
+    const next = await api.fetchProfileById(currentUser.id)
+    setCurrentUser(next)
+  }, [currentUser])
+
   const createPost = useCallback(
     async (file: File, caption: string) => {
       if (!requireAuth()) return
@@ -431,8 +498,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         caption: sanitizeUserText(caption, 2000),
       })
       setPosts((prev) => [post, ...prev])
+
+      try {
+        const reward = await api.fetchPostReward(post.id)
+        if (reward) {
+          const t = getTranslations(language)
+          const updatedProfile = await api.fetchProfileById(currentUser.id)
+          setCurrentUser(updatedProfile)
+          const milestone = MILESTONE_STREAK_DAYS.has(reward.streakDay)
+            ? ` 🎉 ${t.economy.milestoneHit}`
+            : ''
+          toast.success(
+            `🪙 +${reward.coinsAwarded} ${t.economy.coins} · 🔥 ${reward.streakDay} ${t.economy.streakDays}${milestone}`,
+          )
+        }
+      } catch (error) {
+        console.error('[economy] reward sync failed', error)
+      }
     },
-    [currentUser, requireAuth],
+    [currentUser, language, requireAuth],
   )
 
   const createStory = useCallback(
@@ -663,6 +747,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatePassword,
       logout,
       updateProfile,
+      equipCharacter,
+      refreshCurrentUser,
       posts,
       stories,
       feedLoading,
@@ -709,6 +795,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatePassword,
       logout,
       updateProfile,
+      equipCharacter,
+      refreshCurrentUser,
       posts,
       stories,
       feedLoading,
